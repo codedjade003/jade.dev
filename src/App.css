@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    @apply bg-light-bg text-light-text dark:bg-dark-bg dark:text-dark-text transition-colors duration-300;
+  }
+
+  a {
+    @apply text-light-link hover:text-light-hover dark:text-dark-accent dark:hover:text-dark-hover;
+  }
+}
+
+  scroll-behavior: smooth;
+
+
