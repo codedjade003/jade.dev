@@ -41,7 +41,7 @@ export default function Footer() {
           </div>
 
           <a
-            href="/Jade_Resume.docx"
+            href="/Jade_resume.pdf"
             download
             className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-red-500 transition dark:bg-blue-500 dark:hover:bg-red-400"
           >
