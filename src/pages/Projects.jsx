@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 export default function Projects() {
   return (
     <section
@@ -9,49 +11,7 @@ export default function Projects() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {projects.map((proj) => (
-            <div
-              key={proj.title}
-              className="fade-up bg-slate-100 dark:bg-slate-800 p-4 rounded-lg shadow transition-colors text-sm"
-            >
-              <div className="relative aspect-video rounded-md overflow-hidden mb-3 group">
-                <img
-                  src={`https://img.youtube.com/vi/${proj.youtubeId}/hqdefault.jpg`}
-                  alt={`${proj.title} Preview`}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-                />
-                <iframe
-                  className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  src={`https://www.youtube.com/embed/${proj.youtubeId}`}
-                  title={`${proj.title} Demo`}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
-              </div>
-
-              <h3 className="text-lg font-semibold mb-1">{proj.title}</h3>
-              <p className="text-slate-700 dark:text-slate-400 mb-3">{proj.description}</p>
-
-              <div className="flex gap-3 flex-wrap">
-                <a
-                  href={proj.demo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 text-sm bg-blue-700 text-white rounded font-semibold hover:bg-red-500 transition dark:bg-blue-500 dark:hover:bg-red-400"
-                >
-                  View Demo
-                </a>
-                <a
-                  href={proj.code}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
-                >
-                  {proj.codeLabel}
-                </a>
-              </div>
-            </div>
+            <ProjectCard key={proj.title} proj={proj} />
           ))}
         </div>
 
@@ -72,7 +32,72 @@ export default function Projects() {
   );
 }
 
-// Project data abstraction
+function ProjectCard({ proj }) {
+  const [showIframe, setShowIframe] = useState(false);
+  let touchTimer = null;
+
+  const handleTouchStart = () => {
+    touchTimer = setTimeout(() => {
+      setShowIframe(true);
+    }, 500); // long press threshold
+  };
+
+  const handleTouchEnd = () => {
+    clearTimeout(touchTimer);
+  };
+
+  return (
+    <div className="fade-up bg-slate-100 dark:bg-slate-800 p-4 rounded-lg shadow transition-colors text-sm">
+      <div
+        className="relative aspect-video rounded-md overflow-hidden mb-3 group"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <img
+          src={`https://img.youtube.com/vi/${proj.youtubeId}/hqdefault.jpg`}
+          alt={`${proj.title} Preview`}
+          loading="lazy"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+            showIframe ? "opacity-0" : "group-hover:opacity-0"
+          }`}
+        />
+        <iframe
+          className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${
+            showIframe ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
+          src={`https://www.youtube.com/embed/${proj.youtubeId}`}
+          title={`${proj.title} Demo`}
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+
+      <h3 className="text-lg font-semibold mb-1">{proj.title}</h3>
+      <p className="text-slate-700 dark:text-slate-400 mb-3">{proj.description}</p>
+
+      <div className="flex gap-3 flex-wrap">
+        <a
+          href={proj.demo}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-1.5 text-sm bg-blue-700 text-white rounded font-semibold hover:bg-red-500 transition dark:bg-blue-500 dark:hover:bg-red-400"
+        >
+          View Demo
+        </a>
+        <a
+          href={proj.code}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
+        >
+          {proj.codeLabel}
+        </a>
+      </div>
+    </div>
+  );
+}
+
 const projects = [
   {
     title: "Bookstore Inventory App",
