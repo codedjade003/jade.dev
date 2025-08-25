@@ -22,30 +22,9 @@ export default function Experience() {
         "Gained practical experience in graphics design, live streaming, and visual storytelling through weekly technical service and event support.",
     },
     {
-      title: "ICT Intern",
-      place: "NTA (Nigerian Television Authority)",
-      date: "Jun 2025 – Present",
-      description:
-        "Provided IT support, managed hardware and software setups, and assisted in troubleshooting technical issues in a fast-paced broadcast environment.",
-    },
-    {
-      title: "Remote Web Developer",
-      place: "Arewa Film Festival",
-      date: "Jun 2025 – Present",
-      description:
-        "Developed frontend features, styling, and performance improvements while collaborating with a distributed remote team.",
-    },
-    {
-      title: "Frontend Developer",
-      place: "Stelle Homes",
-      date: "Jul 2025 – Present",
-      description:
-        "Collaborated with a UI/UX designer to build a real estate company website, was responsible for responsive design, and building reusable components.",
-    },
-    {
       title: "Remote Junior Developer",
       place: "Startups & Open Source",
-      date: "Feb 2026 – Jun 2026",
+      date: "Oct 2025 – Jan 2026",
       description:
         "Contributed to scalable applications and collaborated with remote teams on live production code. Participated in community-led AI and dev tools projects.",
       future: true,
@@ -53,7 +32,7 @@ export default function Experience() {
     {
       title: "Technical Specialist",
       place: "Global Dev Company",
-      date: "Aug 2026 – Present",
+      date: "Mar 2026 – Present",
       description:
         "Led key deployments, mentored newer devs, and helped shape open infrastructure standards in the African tech ecosystem.",
       future: true,
