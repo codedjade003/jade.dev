@@ -32,18 +32,25 @@ export default function Music() {
   return (
     <section
       id="music"
+      data-reveal="up"
       className="min-h-screen scroll-mt-20 px-4 sm:px-6 py-16 bg-white text-blue-900 dark:bg-[#1b1b2f] dark:text-blue-200 transition-colors duration-300"
     >
       <div className="max-w-5xl mx-auto pr-0 md:pr-16">
-        <h2 className="text-3xl font-bold mb-2 text-right">🎵 Music</h2>
-        <p className="text-right text-sm text-slate-600 dark:text-slate-400 mb-10 italic">
+        <h2 data-reveal="right" className="text-3xl font-bold mb-2 text-right">🎵 Music</h2>
+        <p
+          data-reveal="right"
+          style={{ "--reveal-delay": "110ms" }}
+          className="text-right text-sm text-slate-600 dark:text-slate-400 mb-10 italic"
+        >
           Yeah, I make those too. Going pro someday.
         </p>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {musicData.map(({ title, type, cover, apple, spotify }) => (
+          {musicData.map(({ title, type, cover, apple, spotify }, index) => (
             <div
               key={title}
+              data-reveal="zoom"
+              style={{ "--reveal-delay": `${150 + index * 90}ms` }}
               className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg shadow text-center hover:shadow-lg transition-shadow duration-300"
             >
               <img

@@ -19,13 +19,20 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
   return (
     <>
-      <nav className="flex justify-between items-center px-6 py-4 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300">
-        <h1 className="text-xl font-bold tracking-tight">
+      <nav
+        data-reveal="up"
+        className="flex justify-between items-center px-6 py-4 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
+      >
+        <h1 data-reveal="left" className="text-xl font-bold tracking-tight">
           Jade<span className="text-red-500">.dev</span>
         </h1>
 
         {/* Desktop menu */}
-        <div className="hidden md:flex items-center gap-6 font-medium">
+        <div
+          data-reveal="right"
+          style={{ "--reveal-delay": "60ms" }}
+          className="hidden md:flex items-center gap-6 font-medium"
+        >
           {["home", "about", "projects", "experience", "music", "contact"].map((section) => (
             <a
               key={section}
@@ -49,7 +56,11 @@ export default function Navbar({ darkMode, setDarkMode }) {
         </div>
 
         {/* Mobile menu button */}
-        <div className="md:hidden flex items-center gap-3">
+        <div
+          data-reveal="right"
+          style={{ "--reveal-delay": "80ms" }}
+          className="md:hidden flex items-center gap-3"
+        >
           <button onClick={toggleTheme} aria-label="Toggle Theme">
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>

@@ -82,18 +82,21 @@ export default function Experience() {
   return (
     <section
       id="experience"
+      data-reveal="up"
       className="min-h-screen px-4 sm:px-6 py-16 bg-white text-blue-900 dark:bg-[#1b1b2f] dark:text-blue-200 transition-colors duration-300"
     >
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold mb-8 text-left">Experience & Growth Journey</h2>
+        <h2 data-reveal="left" className="text-3xl font-bold mb-8 text-left">Experience & Growth Journey</h2>
 
         {/* Soft Skills */}
-        <div className="mb-10">
+        <div data-reveal="right" style={{ "--reveal-delay": "80ms" }} className="mb-10">
           <h3 className="text-xl font-semibold mb-4 text-left">Skills Beyond Code</h3>
           <ul className="flex flex-wrap gap-3 text-sm sm:text-base">
             {softSkills.map((skill, i) => (
               <li
                 key={i}
+                data-reveal="up"
+                style={{ "--reveal-delay": `${120 + i * 45}ms` }}
                 className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-4 py-2 rounded-full font-medium"
               >
                 ✅ {skill}
@@ -105,7 +108,12 @@ export default function Experience() {
         {/* Timeline */}
         <div className="relative pl-6 sm:pl-8 space-y-10">
           {experiences.map((exp, i) => (
-            <div key={i} className="relative group transition">
+            <div
+              key={i}
+              data-reveal={i % 2 === 0 ? "left" : "right"}
+              style={{ "--reveal-delay": `${140 + i * 55}ms` }}
+              className="relative group transition"
+            >
               {/* Dot */}
               <div
                 aria-hidden="true"
@@ -147,7 +155,7 @@ export default function Experience() {
         </div>
 
         {/* Future Goals */}
-        <div className="mt-16 text-left">
+        <div data-reveal="up" style={{ "--reveal-delay": "140ms" }} className="mt-16 text-left">
           <h3 className="text-xl font-semibold mb-3 text-green-600 dark:text-green-400">
             This Is The Vision 🌱
           </h3>
@@ -155,6 +163,8 @@ export default function Experience() {
             {futureGoals.map((goal, i) => (
               <li
                 key={i}
+                data-reveal="zoom"
+                style={{ "--reveal-delay": `${180 + i * 45}ms` }}
                 className="bg-blue-50 dark:bg-blue-900 px-4 py-2 rounded shadow-sm"
               >
                 {goal}
@@ -164,7 +174,7 @@ export default function Experience() {
         </div>
 
         {/* CTA */}
-        <div className="mt-12 text-left">
+        <div data-reveal="right" style={{ "--reveal-delay": "220ms" }} className="mt-12 text-left">
           <h3 className="text-xl font-semibold text-red-500">Let’s Build Something</h3>
           <p className="text-slate-700 dark:text-blue-300 mt-2 text-sm sm:text-base">
             My journey may look unconventional, but every step has added to my skill set.

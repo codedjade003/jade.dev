@@ -31,6 +31,8 @@ export default function ScrollToggle() {
   return (
     <button
       onClick={handleClick}
+      data-reveal="zoom"
+      style={{ "--reveal-delay": "200ms" }}
       className="fixed bottom-6 right-6 z-50 px-4 py-2 rounded-full shadow-lg text-white
       bg-blue-800 hover:bg-red-600 dark:bg-blue-500 dark:hover:bg-red-400 transition-colors duration-300"
     >

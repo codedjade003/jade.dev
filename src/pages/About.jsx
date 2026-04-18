@@ -37,11 +37,13 @@ export default function About() {
   return (
     <section
       id="about"
+      data-reveal="up"
       className="min-h-screen px-6 py-16 flex flex-col justify-center items-center text-center 
       bg-white text-blue-800 
       dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
     >
       <img
+        data-reveal="zoom"
         src={ProfileImage}
         alt="Jade profile"
         onClick={handleProfileClick}
@@ -50,18 +52,28 @@ export default function About() {
         title="Click me 5 times 😉"
       />
 
-      <h2 className="text-2xl sm:text-3xl font-bold mb-4">About Me</h2>
+      <h2 data-reveal="left" style={{ "--reveal-delay": "100ms" }} className="text-2xl sm:text-3xl font-bold mb-4">About Me</h2>
 
-      <p className="max-w-xl text-slate-700 dark:text-blue-300 mb-6 text-sm sm:text-base px-2 sm:px-0">
+      <p
+        data-reveal="right"
+        style={{ "--reveal-delay": "160ms" }}
+        className="max-w-xl text-slate-700 dark:text-blue-300 mb-6 text-sm sm:text-base px-2 sm:px-0"
+      >
         I'm David (Jade), a Full-Stack Developer with expertise in building dynamic, scalable applications.
         I specialize in the MERN stack and am passionate about creating impactful tools using AI and modern web technologies.
         Strong foundation in JavaScript, data structures, and collaborative coding with Git/GitHub.
       </p>
 
-      <div className="flex flex-wrap justify-center gap-3 text-xs sm:text-sm font-semibold">
-        {['JavaScript', 'TypeScript', 'React.js', 'Node.js', 'Express.js', 'MongoDB', 'Git/GitHub', 'Vercel', 'Netlify', 'Data Analysis'].map((skill) => (
+      <div
+        data-reveal="up"
+        style={{ "--reveal-delay": "220ms" }}
+        className="flex flex-wrap justify-center gap-3 text-xs sm:text-sm font-semibold"
+      >
+        {['JavaScript', 'TypeScript', 'React.js', 'Node.js', 'Express.js', 'MongoDB', 'Git/GitHub', 'Vercel', 'Netlify', 'Data Analysis'].map((skill, index) => (
           <span
             key={skill}
+            data-reveal="zoom"
+            style={{ "--reveal-delay": `${260 + index * 35}ms` }}
             className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full 
             dark:bg-blue-900 dark:text-blue-200"
           >
