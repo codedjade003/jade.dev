@@ -1,8 +1,26 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 html {
   scroll-behavior: smooth;
+  background-color: #ffffff;
+  color-scheme: light;
+}
+
+html.dark {
+  background-color: #1b1b2f;
+  color-scheme: dark;
+}
+
+body {
+  background-color: transparent;
+  transition: background-color 300ms ease, color 300ms ease;
 }
 
 [data-reveal] {

@@ -19,9 +19,14 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
   return (
     <>
+      <div
+        aria-hidden="true"
+        className="hidden md:block fixed inset-x-0 top-0 h-4 z-[70] peer/navhotspot"
+      />
+
       <nav
         data-reveal="up"
-        className="flex justify-between items-center px-6 py-4 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
+        className="sticky top-0 z-[80] flex justify-between items-center px-6 py-4 bg-white text-blue-800 shadow-sm dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300 md:fixed md:inset-x-0 md:backdrop-blur-sm md:bg-white/95 md:dark:bg-[#1b1b2f]/95 md:transition-transform md:duration-500 md:ease-[cubic-bezier(0.16,1,0.3,1)] md:-translate-y-full md:peer-hover/navhotspot:translate-y-0 md:hover:translate-y-0"
       >
         <h1 data-reveal="left" className="text-xl font-bold tracking-tight">
           Jade<span className="text-red-500">.dev</span>
@@ -76,7 +81,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white dark:bg-[#1b1b2f] px-6 pb-6 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3">
+        <div className="md:hidden sticky top-[72px] z-[75] bg-white dark:bg-[#1b1b2f] px-6 pb-6 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3 border-b border-blue-100 dark:border-blue-900/60 shadow-sm">
           {["home", "about", "projects", "experience", "music", "contact"].map((section) => (
             <a
               key={section}
