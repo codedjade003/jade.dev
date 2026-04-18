@@ -109,10 +109,11 @@ export default function Navbar({ darkMode, setDarkMode }) {
       />
 
       <nav
-        data-reveal="up"
         onMouseEnter={queueDesktopShow}
         onMouseLeave={queueDesktopHide}
-        className={`sticky top-0 z-[80] flex justify-between items-center px-6 py-4 bg-white text-blue-800 shadow-sm dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300 md:transition-transform md:duration-700 md:ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`sticky top-0 z-[80] w-full flex justify-between items-center px-6 py-4 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300 md:transition-transform md:duration-700 md:ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isAtTop ? "shadow-none" : "shadow-sm"
+        } ${
           isAtTop
             ? "md:backdrop-blur-none"
             : "md:fixed md:inset-x-0 md:top-0 md:backdrop-blur-sm md:bg-white/95 md:dark:bg-[#1b1b2f]/95"
