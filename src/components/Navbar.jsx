@@ -1,5 +1,5 @@
 import { Moon, Sun, Heart, Copy, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog } from "@headlessui/react";
 
 
@@ -8,8 +8,86 @@ export default function Navbar({ darkMode, setDarkMode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
+  const [desktopMenuVisible, setDesktopMenuVisible] = useState(false);
+  const showTimerRef = useRef(null);
+  const hideTimerRef = useRef(null);
 
   const toggleTheme = () => setDarkMode(!darkMode);
+
+  const clearDesktopTimers = () => {
+    if (showTimerRef.current) {
+      clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
+    }
+
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+
+  const queueDesktopShow = () => {
+    if (isAtTop || window.innerWidth < 768) return;
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
+    if (desktopMenuVisible || showTimerRef.current) return;
+
+    showTimerRef.current = setTimeout(() => {
+      setDesktopMenuVisible(true);
+      showTimerRef.current = null;
+    }, 170);
+  };
+
+  const queueDesktopHide = () => {
+    if (isAtTop || window.innerWidth < 768) return;
+    if (showTimerRef.current) {
+      clearTimeout(showTimerRef.current);
+      showTimerRef.current = null;
+    }
+
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+    }
+
+    hideTimerRef.current = setTimeout(() => {
+      setDesktopMenuVisible(false);
+      hideTimerRef.current = null;
+    }, 360);
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const atTop = window.scrollY <= 16;
+      setIsAtTop(atTop);
+      if (atTop) {
+        clearDesktopTimers();
+        setDesktopMenuVisible(false);
+      }
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      clearDesktopTimers();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   const handleCopy = (label, value) => {
     navigator.clipboard.writeText(value);
@@ -17,16 +95,28 @@ export default function Navbar({ darkMode, setDarkMode }) {
     setTimeout(() => setCopied(null), 1500);
   };
 
+  const desktopNavVisible = isAtTop || desktopMenuVisible;
+
   return (
     <>
       <div
         aria-hidden="true"
-        className="hidden md:block fixed inset-x-0 top-0 h-4 z-[70] peer/navhotspot"
+        onMouseEnter={queueDesktopShow}
+        onMouseLeave={queueDesktopHide}
+        className={`hidden md:block fixed inset-x-0 top-0 z-[70] ${
+          isAtTop ? "h-0 pointer-events-none" : "h-8"
+        }`}
       />
 
       <nav
         data-reveal="up"
-        className="sticky top-0 z-[80] flex justify-between items-center px-6 py-4 bg-white text-blue-800 shadow-sm dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300 md:fixed md:inset-x-0 md:backdrop-blur-sm md:bg-white/95 md:dark:bg-[#1b1b2f]/95 md:transition-transform md:duration-500 md:ease-[cubic-bezier(0.16,1,0.3,1)] md:-translate-y-full md:peer-hover/navhotspot:translate-y-0 md:hover:translate-y-0"
+        onMouseEnter={queueDesktopShow}
+        onMouseLeave={queueDesktopHide}
+        className={`sticky top-0 z-[80] flex justify-between items-center px-6 py-4 bg-white text-blue-800 shadow-sm dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300 md:transition-transform md:duration-700 md:ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isAtTop
+            ? "md:backdrop-blur-none"
+            : "md:fixed md:inset-x-0 md:top-0 md:backdrop-blur-sm md:bg-white/95 md:dark:bg-[#1b1b2f]/95"
+        } ${desktopNavVisible ? "md:translate-y-0" : "md:-translate-y-full"}`}
       >
         <h1 data-reveal="left" className="text-xl font-bold tracking-tight">
           Jade<span className="text-red-500">.dev</span>
@@ -81,28 +171,37 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden sticky top-[72px] z-[75] bg-white dark:bg-[#1b1b2f] px-6 pb-6 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3 border-b border-blue-100 dark:border-blue-900/60 shadow-sm">
-          {["home", "about", "projects", "experience", "music", "contact"].map((section) => (
-            <a
-              key={section}
-              href={`#${section}`}
-              className="block capitalize hover:text-red-500 transition"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {section}
-            </a>
-          ))}
-
+        <>
           <button
-            onClick={() => {
-              setIsOpen(true);
-              setMobileMenuOpen(false);
-            }}
-            className="flex items-center gap-1 text-red-500 hover:scale-105 transition"
-          >
-            <Heart size={16} /> Tip Jar
-          </button>
-        </div>
+            type="button"
+            aria-label="Close mobile menu backdrop"
+            className="md:hidden fixed inset-0 top-[72px] z-[73] bg-black/30"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+
+          <div className="md:hidden fixed inset-x-0 top-[72px] z-[75] bg-white/95 dark:bg-[#1b1b2f]/95 backdrop-blur-sm px-6 py-5 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3 border-b border-blue-100 dark:border-blue-900/60 shadow-xl max-h-[calc(100vh-72px)] overflow-y-auto">
+            {["home", "about", "projects", "experience", "music", "contact"].map((section) => (
+              <a
+                key={section}
+                href={`#${section}`}
+                className="block capitalize hover:text-red-500 transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {section}
+              </a>
+            ))}
+
+            <button
+              onClick={() => {
+                setIsOpen(true);
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-1 text-red-500 hover:scale-105 transition"
+            >
+              <Heart size={16} /> Tip Jar
+            </button>
+          </div>
+        </>
       )}
 
       {/* Modal */}
