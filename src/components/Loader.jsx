@@ -9,6 +9,13 @@ const FUN_FACTS = [
   'I make music when I am not shipping code.',
   'This color theme is inspired by Sasuke Uchiha.',
   'Favorite anime character: Sasuke Uchiha.',
+  'Be honest, how many times have you refreshed now?',
+  'In another universe, I am an artist.',
+  'I write... sometimes.',
+  'I also draw... sometimes.',
+  'Try dark mode.',
+  'AAAAAARGHHHHH.',
+  "I slowed it down on purpose, it's not broken don't worry.",
   'Hint: my profile photo hides a 5-click easter egg.',
   'I want to become a motion designer someday.',
   'I could really use a new laptop, no jokes.',
@@ -88,46 +95,49 @@ export default function Loader() {
   }, [factSequence]);
 
   return (
-    <div className="fixed inset-0 bg-[#1b1b2f] text-white flex items-center justify-center z-[9999] px-4">
-      <div className="w-[min(92vw,48rem)] text-center">
-        <p className="text-[11px] sm:text-xs uppercase tracking-[0.24em] text-blue-200/75 mb-3">
-          Loading Portfolio Universe
-        </p>
+    <div className="fixed inset-0 bg-[#1b1b2f] text-white flex items-center justify-center z-[9999] px-4 overflow-hidden">
+      <div className="w-[min(92vw,56rem)] text-center relative min-h-[72vh] flex flex-col items-center justify-center">
+        <div className="loader-pill inline-flex items-center gap-2 rounded-full border border-blue-300/35 bg-blue-400/10 px-4 py-2 backdrop-blur-sm">
+          <span className="loader-pill-dot h-2.5 w-2.5 rounded-full bg-blue-300" />
+          <p className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-blue-100/85">
+            Loading Portfolio Universe
+          </p>
+        </div>
 
-        <h1 className="text-4xl sm:text-5xl font-bold">
+        <h1 className="mt-5 text-4xl sm:text-5xl font-bold">
           <Typewriter
             words={['Jade.dev']}
             loop={1}
             cursor
             cursorStyle="_"
-            typeSpeed={90}
-            deleteSpeed={40}
-            delaySpeed={650}
+            typeSpeed={120}
+            deleteSpeed={50}
+            delaySpeed={750}
           />
         </h1>
 
-        <div className="mt-6 rounded-2xl border border-blue-400/30 bg-blue-400/10 backdrop-blur-sm px-4 py-4 sm:px-5 sm:py-5">
-          <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-blue-200/80">
+        <div className="absolute inset-x-0 bottom-8 sm:bottom-10 px-2 text-center">
+          <p className="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-blue-200/65">
             Fun Fact {factIndex + 1}/{factSequence.length}
           </p>
           <p
-            className={`mt-2 text-sm sm:text-base text-blue-50 transition-all duration-300 ${
+            className={`mt-2 text-sm sm:text-base text-blue-50/90 transition-all duration-300 ${
               factVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
             {factSequence[factIndex]}
           </p>
-        </div>
 
-        <div className="mt-4 flex justify-center gap-2">
-          {factSequence.map((fact, index) => (
-            <span
-              key={`${fact}-${index}`}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === factIndex ? 'w-7 bg-blue-300' : 'w-2 bg-blue-300/40'
-              }`}
-            />
-          ))}
+          <div className="mt-3 flex justify-center gap-2">
+            {factSequence.map((fact, index) => (
+              <span
+                key={`${fact}-${index}`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  index === factIndex ? 'w-6 bg-blue-300/95' : 'w-1.5 bg-blue-300/35'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

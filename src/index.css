@@ -155,3 +155,37 @@ body {
 .section-flip-back {
   transform: rotateY(180deg);
 }
+
+@keyframes loaderPillBreath {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(96, 165, 250, 0);
+  }
+
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 18px rgba(96, 165, 250, 0.24);
+  }
+}
+
+@keyframes loaderDotPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.loader-pill {
+  animation: loaderPillBreath 2.6s ease-in-out infinite;
+}
+
+.loader-pill-dot {
+  animation: loaderDotPulse 1.2s ease-in-out infinite;
+}
