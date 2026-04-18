@@ -113,60 +113,108 @@ export default function Projects() {
           className="rounded-3xl border border-blue-100 dark:border-blue-900/60 bg-slate-50/70 dark:bg-[#21213a] p-4 sm:p-6"
         >
           <div className="flex items-center justify-between gap-2">
-            <button
-              onClick={() => moveSection(-1)}
-              type="button"
-              aria-label="Previous project category"
-              className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-xs sm:text-sm hover:border-red-500 hover:text-red-500 transition-colors"
-            >
-              Prev Group
-            </button>
+            <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+              Project Carousel
+            </p>
 
-            <span className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-              Project Groups
-            </span>
-
-            <button
-              onClick={() => moveSection(1)}
-              type="button"
-              aria-label="Next project category"
-              className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-xs sm:text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
-            >
-              Next Group
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => moveSection(-1)}
+                type="button"
+                aria-label="Previous project category"
+                className="h-8 w-8 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors"
+              >
+                {"<"}
+              </button>
+              <button
+                onClick={() => moveSection(1)}
+                type="button"
+                aria-label="Next project category"
+                className="h-8 w-8 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
+              >
+                {">"}
+              </button>
+            </div>
           </div>
 
           <div
-            className="project-flick-surface mt-4"
+            tabIndex={0}
+            role="region"
+            aria-label="Project category carousel"
+            className="project-flick-surface relative mt-4 h-40 sm:h-44 outline-none"
             onPointerDown={(event) => setHeadingDragStartX(event.clientX)}
             onPointerUp={handleHeadingPointerUp}
             onPointerCancel={() => setHeadingDragStartX(null)}
             onPointerLeave={() => setHeadingDragStartX(null)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowRight") moveSection(1);
+              if (event.key === "ArrowLeft") moveSection(-1);
+            }}
           >
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {projectSectionConfig.map((section, index) => {
-                const isActive = index === activeSectionIndex;
+            {[-1, 0, 1].map((offset) => {
+              const sectionIndex =
+                (activeSectionIndex + offset + projectSectionConfig.length) % projectSectionConfig.length;
+              const section = projectSectionConfig[sectionIndex];
+              const isCenter = offset === 0;
 
-                return (
-                  <button
-                    key={section.key}
-                    type="button"
-                    onClick={() => jumpToSection(index)}
-                    aria-pressed={isActive}
-                    className={`shrink-0 rounded-xl px-4 py-2 text-left border transition-colors min-w-[180px] ${
-                      isActive
-                        ? "bg-blue-700 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-500"
-                        : "bg-white/80 border-blue-200 text-blue-800 dark:bg-slate-800 dark:border-blue-900 dark:text-blue-200 hover:border-red-400 hover:text-red-500"
+              return (
+                <button
+                  key={`${section.key}-${offset}`}
+                  type="button"
+                  onClick={() => {
+                    if (offset === 0) return;
+                    moveSection(offset > 0 ? 1 : -1);
+                  }}
+                  aria-current={isCenter ? "true" : undefined}
+                  className={`absolute left-1/2 top-1/2 w-[clamp(11rem,42vw,18rem)] rounded-2xl border px-4 py-3 text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                    isCenter
+                      ? "bg-blue-700 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-500"
+                      : "bg-white/85 text-blue-800 border-blue-200 dark:bg-slate-800/95 dark:text-blue-200 dark:border-blue-900 hover:border-red-400"
+                  }`}
+                  style={{
+                    transform: `translate(-50%, -50%) translateX(calc(${offset} * clamp(7rem, 24vw, 13rem))) scale(${isCenter ? 1.05 : 0.82})`,
+                    zIndex: isCenter ? 30 : 20,
+                    opacity: isCenter ? 1 : 0.62,
+                    filter: isCenter ? "none" : "saturate(0.76)",
+                  }}
+                >
+                  <p className={`text-[10px] uppercase tracking-[0.2em] ${isCenter ? "text-blue-100" : "text-slate-500 dark:text-slate-400"}`}>
+                    {section.type}
+                  </p>
+                  <p className={`mt-1 font-semibold ${isCenter ? "text-lg" : "text-sm"}`}>{section.title}</p>
+                  <p
+                    className={`text-xs mt-1 ${
+                      isCenter ? "text-blue-100" : "text-slate-600 dark:text-slate-400"
                     }`}
                   >
-                    <p className="font-semibold text-sm">{section.title}</p>
-                    <p className={`text-xs ${isActive ? "text-blue-100" : "text-slate-500 dark:text-slate-400"}`}>
-                      {section.projects.length} projects
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+                    {section.hint}
+                  </p>
+                  <p
+                    className={`mt-2 text-xs font-medium ${
+                      isCenter ? "text-blue-100" : "text-blue-600 dark:text-blue-300"
+                    }`}
+                  >
+                    {section.projects.length} projects
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-2 flex justify-center gap-2">
+            {projectSectionConfig.map((section, index) => (
+              <button
+                key={section.key}
+                type="button"
+                onClick={() => jumpToSection(index)}
+                aria-label={`Go to ${section.title}`}
+                className={`h-2.5 rounded-full transition-all duration-300 ${
+                  index === activeSectionIndex
+                    ? "w-7 bg-blue-700 dark:bg-blue-400"
+                    : "w-2.5 bg-blue-200 dark:bg-blue-900"
+                }`}
+              />
+            ))}
           </div>
 
           <div
@@ -355,25 +403,51 @@ function HoverVideoPreview({ project }) {
 }
 
 function ProjectActions({ project, type }) {
-  if ((type === "live" || type === "personal") && project.demo && project.code) {
+  if (type === "live" || type === "personal" || type === "recent") {
+    const hasSeparateSiteAndCode = Boolean(project.site && project.code);
+    const siteHref = project.site ?? (type === "live" && project.codeLabel === "Visit Site" ? project.code : null);
+    const codeHref = hasSeparateSiteAndCode
+      ? project.code
+      : type === "personal" || type === "recent"
+      ? project.code
+      : null;
+
+    if (!project.demo && !siteHref && !codeHref) return null;
+
     return (
       <div className="flex gap-2 flex-wrap">
-        <a
-          href={project.demo}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-3 py-1.5 text-sm bg-blue-700 text-white rounded font-semibold hover:bg-red-500 transition-colors dark:bg-blue-500 dark:hover:bg-red-400"
-        >
-          View Demo
-        </a>
-        <a
-          href={project.code}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
-        >
-          {type === "live" ? "Visit Site" : project.codeLabel}
-        </a>
+        {project.demo && (
+          <a
+            href={project.demo}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 text-sm bg-blue-700 text-white rounded font-semibold hover:bg-red-500 transition-colors dark:bg-blue-500 dark:hover:bg-red-400"
+          >
+            View Demo
+          </a>
+        )}
+
+        {siteHref && (
+          <a
+            href={siteHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
+          >
+            Visit Site
+          </a>
+        )}
+
+        {codeHref && (
+          <a
+            href={codeHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
+          >
+            {project.codeLabel ?? "Source Code"}
+          </a>
+        )}
       </div>
     );
   }
@@ -432,6 +506,16 @@ function getProjectSectionConfig() {
       viewMoreHref: "https://github.com/codedjade003",
     },
     {
+      key: "recent",
+      title: "Recent Projects",
+      hint: "Fresh launches and newly shipped builds.",
+      type: "recent",
+      projects: recentProjects,
+      align: "left",
+      viewMoreLabel: "View More Recent Work",
+      viewMoreHref: "https://github.com/codedjade003",
+    },
+    {
       key: "personal",
       title: "Personal Projects",
       hint: "Built to explore and push ideas.",
@@ -473,6 +557,39 @@ const liveProjects = [
     demo: "https://youtu.be/62AW9IENSHo",
     code: "https://stellehomes.com",
     codeLabel: "Visit Site",
+  },
+];
+
+const recentProjects = [
+  {
+    title: "LFC Jahi Multimedia Repository",
+    description:
+      "A multimedia archive platform for preserving and organizing video content with a clean browse experience for members and media teams.",
+    youtubeId: "JPOaCAFA_Fw",
+    demo: "https://youtu.be/JPOaCAFA_Fw",
+    site: "https://lfcjahimediaarchive.xyz",
+    code: "https://github.com/codedjade003/LFCJahiMediaArchive",
+    codeLabel: "Source Code",
+  },
+  {
+    title: "Goodness Birthday Website",
+    description:
+      "A personalized birthday microsite built as a playful celebration page, blending heartfelt storytelling with polished visual presentation.",
+    youtubeId: "VW2FaJHQAAM",
+    demo: "https://youtu.be/VW2FaJHQAAM",
+    site: "https://goodnessosim.vercel.app",
+    code: "https://github.com/codedjade003/goodness",
+    codeLabel: "Source Code",
+  },
+  {
+    title: "Tech Learn (Updated)",
+    description:
+      "An updated release of the Tech Learn platform focused on technical training resources, guided learning paths, and community-friendly access.",
+    youtubeId: "QK3Nx6iPiI4",
+    demo: "https://youtu.be/QK3Nx6iPiI4",
+    site: "https://lfctechlearn.com",
+    code: "https://github.com/codedjade003/LFCJahiTechLearn",
+    codeLabel: "Source Code",
   },
 ];
 
@@ -521,17 +638,6 @@ const upcomingProjects = [
     progress: [
       { label: "Design", value: 80 },
       { label: "Development", value: 40 },
-    ],
-  },
-  {
-    title: "Tech Learning",
-    description:
-      "A platform in development for the technical department of my church, aiming to organize and share learning resources.",
-    youtubeId: "ePfemKcC02s",
-    demo: "https://youtu.be/ePfemKcC02s",
-    progress: [
-      { label: "Frontend", value: 50 },
-      { label: "Backend", value: 30 },
     ],
   },
   {
