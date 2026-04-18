@@ -132,9 +132,15 @@ body {
   transition: transform 560ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.section-flip-card:hover .section-flip-card-inner,
-.section-flip-card:focus-within .section-flip-card-inner {
+.section-flip-card.is-flipped .section-flip-card-inner {
   transform: rotateY(180deg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .section-flip-card:hover .section-flip-card-inner,
+  .section-flip-card:focus-within .section-flip-card-inner {
+    transform: rotateY(180deg);
+  }
 }
 
 .section-flip-face {

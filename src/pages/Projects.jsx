@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Projects() {
   const projectSectionConfig = getProjectSectionConfig();
@@ -6,8 +6,9 @@ export default function Projects() {
   const [sectionDirection, setSectionDirection] = useState(1);
   const [cardFlipDirection, setCardFlipDirection] = useState(-1);
   const [pauseAutoSlide, setPauseAutoSlide] = useState(false);
-  const [headingDragStartX, setHeadingDragStartX] = useState(null);
   const [cardDragStartX, setCardDragStartX] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileFlippedSectionKey, setMobileFlippedSectionKey] = useState(null);
   const [projectIndices, setProjectIndices] = useState(() =>
     Object.fromEntries(projectSectionConfig.map((section) => [section.key, 0]))
   );
@@ -19,6 +20,7 @@ export default function Projects() {
 
   const moveSection = (direction) => {
     setSectionDirection(direction);
+    setMobileFlippedSectionKey(null);
     setActiveSectionIndex((current) => {
       const totalSections = projectSectionConfig.length;
       return (current + direction + totalSections) % totalSections;
@@ -28,8 +30,19 @@ export default function Projects() {
   const jumpToSection = (index) => {
     if (index === activeSectionIndex) return;
     setSectionDirection(index > activeSectionIndex ? 1 : -1);
+    setMobileFlippedSectionKey(null);
     setActiveSectionIndex(index);
   };
+
+  useEffect(() => {
+    const syncViewport = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => window.removeEventListener("resize", syncViewport);
+  }, []);
 
   const moveProject = (direction) => {
     if (activeProjectCount < 2) return;
@@ -59,20 +72,6 @@ export default function Projects() {
     return () => clearInterval(timer);
   }, [activeProjectCount, activeSection.key, pauseAutoSlide]);
 
-  const handleHeadingPointerUp = (event) => {
-    if (headingDragStartX === null) return;
-
-    const delta = event.clientX - headingDragStartX;
-    if (Math.abs(delta) > 50) {
-      if (delta < 0) {
-        moveSection(1);
-      } else {
-        moveSection(-1);
-      }
-    }
-    setHeadingDragStartX(null);
-  };
-
   const handleCardPointerUp = (event) => {
     if (cardDragStartX === null) return;
 
@@ -91,9 +90,9 @@ export default function Projects() {
     <section
       id="projects"
       data-reveal="up"
-      className="scroll-mt-20 px-4 sm:px-6 py-12 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
+      className="scroll-mt-20 py-12 bg-slate-50/70 text-blue-800 dark:bg-[#21213a]/35 dark:text-blue-300 transition-colors duration-300"
     >
-      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-7">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 sm:space-y-7">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <h2 data-reveal="left" className="text-3xl font-bold">
             Projects
@@ -110,14 +109,14 @@ export default function Projects() {
         <div
           data-reveal="up"
           style={{ "--reveal-delay": "140ms" }}
-          className="rounded-3xl border border-blue-100 dark:border-blue-900/60 bg-slate-50/70 dark:bg-[#21213a] p-4 sm:p-6"
+          className="pt-3 sm:pt-4"
         >
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 whitespace-nowrap">
               Project Carousel
             </p>
 
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <button
                 onClick={() => moveSection(-1)}
                 type="button"
@@ -142,10 +141,6 @@ export default function Projects() {
             role="region"
             aria-label="Project category carousel"
             className="project-flick-surface relative mt-4 h-56 sm:h-64 outline-none"
-            onPointerDown={(event) => setHeadingDragStartX(event.clientX)}
-            onPointerUp={handleHeadingPointerUp}
-            onPointerCancel={() => setHeadingDragStartX(null)}
-            onPointerLeave={() => setHeadingDragStartX(null)}
             onKeyDown={(event) => {
               if (event.key === "ArrowRight") moveSection(1);
               if (event.key === "ArrowLeft") moveSection(-1);
@@ -165,7 +160,16 @@ export default function Projects() {
                   previewProject={previewProject}
                   isCenter={isCenter}
                   offset={offset}
-                  onClick={() => {
+                  isMobile={isMobile}
+                  isMobileFlipped={mobileFlippedSectionKey === section.key}
+                  onSwipe={moveSection}
+                  onTapFlip={() => {
+                    if (!isMobile) return;
+                    setMobileFlippedSectionKey((current) =>
+                      current === section.key ? null : section.key
+                    );
+                  }}
+                  onSelect={() => {
                     if (offset === 0) return;
                     moveSection(offset > 0 ? 1 : -1);
                   }}
@@ -173,6 +177,10 @@ export default function Projects() {
               );
             })}
           </div>
+
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 md:hidden">
+            Tap a card to flip. Swipe left or right to rotate.
+          </p>
 
           <div className="mt-2 flex justify-center gap-2">
             {projectSectionConfig.map((section, index) => (
@@ -201,7 +209,7 @@ export default function Projects() {
                 <p className="text-sm text-slate-600 dark:text-slate-400">{activeSection.hint}</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2">
                 <button
                   onClick={() => moveProject(-1)}
                   type="button"
@@ -299,25 +307,69 @@ export default function Projects() {
   );
 }
 
-function SectionFlipCategoryCard({ section, previewProject, isCenter, offset, onClick }) {
+function SectionFlipCategoryCard({
+  section,
+  previewProject,
+  isCenter,
+  offset,
+  isMobile,
+  isMobileFlipped,
+  onSwipe,
+  onTapFlip,
+  onSelect,
+}) {
   const previewImage = previewProject?.youtubeId
     ? `https://img.youtube.com/vi/${previewProject.youtubeId}/hqdefault.jpg`
     : null;
+  const pointerStartRef = useRef(null);
+
+  const handlePointerDown = (event) => {
+    if (!isMobile || event.pointerType !== "touch") return;
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const handlePointerUp = (event) => {
+    if (!isMobile || event.pointerType !== "touch" || !pointerStartRef.current) return;
+
+    const deltaX = event.clientX - pointerStartRef.current.x;
+    const deltaY = event.clientY - pointerStartRef.current.y;
+    pointerStartRef.current = null;
+
+    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      onSwipe(deltaX < 0 ? 1 : -1);
+      return;
+    }
+
+    if (Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12) {
+      onTapFlip();
+    }
+  };
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        if (isMobile) return;
+        onSelect();
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={() => {
+        pointerStartRef.current = null;
+      }}
+      onPointerLeave={() => {
+        pointerStartRef.current = null;
+      }}
       aria-current={isCenter ? "true" : undefined}
       className="group absolute left-1/2 top-1/2 w-[clamp(12rem,45vw,21rem)] h-[10.5rem] sm:h-[12rem] text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
       style={{
-        transform: `translate(-50%, -50%) translateX(calc(${offset} * clamp(8.2rem, 26vw, 16rem))) scale(${isCenter ? 1.06 : 0.8})`,
+        transform: `translate(-50%, -50%) translateX(calc(${offset} * clamp(9.5rem, 31vw, 22rem))) scale(${isCenter ? 1.08 : 0.77})`,
         zIndex: isCenter ? 30 : 20,
         opacity: isCenter ? 1 : 0.58,
         filter: isCenter ? "none" : "saturate(0.72)",
       }}
     >
-      <div className="section-flip-card h-full w-full">
+      <div className={`section-flip-card h-full w-full ${isMobileFlipped ? "is-flipped" : ""}`}>
         <div className="section-flip-card-inner">
           <div
             className={`section-flip-face border ${

@@ -21,7 +21,7 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 3000);
+    const timer = setTimeout(() => setLoading(false), 7000);
     return () => clearTimeout(timer);
   }, []);
 

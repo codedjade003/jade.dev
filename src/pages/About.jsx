@@ -27,7 +27,7 @@ export default function About() {
   }, [showCountdown, countdown]);
 
   const handleYes = () => {
-    window.location.href = 'https://animepahe.ru';
+    window.location.href = 'https://animepahe.com';
   };
 
   const handleNo = () => {
