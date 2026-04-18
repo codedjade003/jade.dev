@@ -141,7 +141,7 @@ export default function Projects() {
             tabIndex={0}
             role="region"
             aria-label="Project category carousel"
-            className="project-flick-surface relative mt-4 h-40 sm:h-44 outline-none"
+            className="project-flick-surface relative mt-4 h-56 sm:h-64 outline-none"
             onPointerDown={(event) => setHeadingDragStartX(event.clientX)}
             onPointerUp={handleHeadingPointerUp}
             onPointerCancel={() => setHeadingDragStartX(null)}
@@ -156,47 +156,20 @@ export default function Projects() {
                 (activeSectionIndex + offset + projectSectionConfig.length) % projectSectionConfig.length;
               const section = projectSectionConfig[sectionIndex];
               const isCenter = offset === 0;
+              const previewProject = section.projects[projectIndices[section.key] ?? 0] ?? section.projects[0];
 
               return (
-                <button
+                <SectionFlipCategoryCard
                   key={`${section.key}-${offset}`}
-                  type="button"
+                  section={section}
+                  previewProject={previewProject}
+                  isCenter={isCenter}
+                  offset={offset}
                   onClick={() => {
                     if (offset === 0) return;
                     moveSection(offset > 0 ? 1 : -1);
                   }}
-                  aria-current={isCenter ? "true" : undefined}
-                  className={`absolute left-1/2 top-1/2 w-[clamp(11rem,42vw,18rem)] rounded-2xl border px-4 py-3 text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                    isCenter
-                      ? "bg-blue-700 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-500"
-                      : "bg-white/85 text-blue-800 border-blue-200 dark:bg-slate-800/95 dark:text-blue-200 dark:border-blue-900 hover:border-red-400"
-                  }`}
-                  style={{
-                    transform: `translate(-50%, -50%) translateX(calc(${offset} * clamp(7rem, 24vw, 13rem))) scale(${isCenter ? 1.05 : 0.82})`,
-                    zIndex: isCenter ? 30 : 20,
-                    opacity: isCenter ? 1 : 0.62,
-                    filter: isCenter ? "none" : "saturate(0.76)",
-                  }}
-                >
-                  <p className={`text-[10px] uppercase tracking-[0.2em] ${isCenter ? "text-blue-100" : "text-slate-500 dark:text-slate-400"}`}>
-                    {section.type}
-                  </p>
-                  <p className={`mt-1 font-semibold ${isCenter ? "text-lg" : "text-sm"}`}>{section.title}</p>
-                  <p
-                    className={`text-xs mt-1 ${
-                      isCenter ? "text-blue-100" : "text-slate-600 dark:text-slate-400"
-                    }`}
-                  >
-                    {section.hint}
-                  </p>
-                  <p
-                    className={`mt-2 text-xs font-medium ${
-                      isCenter ? "text-blue-100" : "text-blue-600 dark:text-blue-300"
-                    }`}
-                  >
-                    {section.projects.length} projects
-                  </p>
-                </button>
+                />
               );
             })}
           </div>
@@ -323,6 +296,74 @@ export default function Projects() {
         </p>
       </div>
     </section>
+  );
+}
+
+function SectionFlipCategoryCard({ section, previewProject, isCenter, offset, onClick }) {
+  const previewImage = previewProject?.youtubeId
+    ? `https://img.youtube.com/vi/${previewProject.youtubeId}/hqdefault.jpg`
+    : null;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={isCenter ? "true" : undefined}
+      className="group absolute left-1/2 top-1/2 w-[clamp(12rem,45vw,21rem)] h-[10.5rem] sm:h-[12rem] text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+      style={{
+        transform: `translate(-50%, -50%) translateX(calc(${offset} * clamp(8.2rem, 26vw, 16rem))) scale(${isCenter ? 1.06 : 0.8})`,
+        zIndex: isCenter ? 30 : 20,
+        opacity: isCenter ? 1 : 0.58,
+        filter: isCenter ? "none" : "saturate(0.72)",
+      }}
+    >
+      <div className="section-flip-card h-full w-full">
+        <div className="section-flip-card-inner">
+          <div
+            className={`section-flip-face border ${
+              isCenter
+                ? "border-blue-400 dark:border-blue-300"
+                : "border-blue-200 dark:border-blue-900"
+            }`}
+          >
+            <div className="relative h-full rounded-2xl overflow-hidden">
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt={`${section.title} preview`}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-slate-300 dark:bg-slate-700" />
+              )}
+
+              <div
+                className={`absolute inset-0 ${
+                  isCenter
+                    ? "bg-gradient-to-t from-blue-900/80 via-blue-900/40 to-transparent"
+                    : "bg-gradient-to-t from-slate-900/75 via-slate-900/35 to-transparent"
+                }`}
+              />
+
+              <div className="relative z-10 flex h-full flex-col justify-end p-3 sm:p-4 text-white">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-blue-100">{section.type}</p>
+                <h4 className={`font-semibold leading-tight ${isCenter ? "text-lg" : "text-sm"}`}>{section.title}</h4>
+                <p className="text-xs text-blue-100/95 truncate">{previewProject?.title ?? "No preview available"}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="section-flip-face section-flip-back rounded-2xl border border-blue-200 dark:border-blue-800 bg-white/95 dark:bg-[#1f233c] p-3 sm:p-4">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-blue-500 dark:text-blue-300">{section.type}</p>
+            <h4 className="mt-1 font-semibold text-base text-blue-800 dark:text-blue-100">{section.title}</h4>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{section.hint}</p>
+            <p className="mt-2 text-xs font-semibold text-blue-600 dark:text-blue-300">{section.projects.length} projects</p>
+            <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">Hover to flip. Swipe to rotate.</p>
+          </div>
+        </div>
+      </div>
+    </button>
   );
 }
 
