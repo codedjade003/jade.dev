@@ -1,80 +1,82 @@
 export default function Experience() {
   const experiences = [
     {
-      title: "Cybersecurity Intern",
-      place: "National Defence College",
-      date: "Mar – Aug 2023",
+      title: "IT Intern",
+      place: "National Defence College (NDC) Abuja",
+      date: "Mar – Sep 2023",
       description:
-        "Assisted in organizing and executing a cybersecurity training program. Helped with setup, logistics, and technical support across departments.",
+        "Shadowed IT professionals during infrastructure maintenance and gained exposure to system setups, data handling, and digital archiving. Sparked early interest in software development.",
     },
     {
-      title: "Data Analyst Assistant",
-      place: "PhD Research (Lassa Fever Study)",
-      date: "Jan – Feb 2024",
+      title: "Research Assistant",
+      place: "Public Health Project (Remote/On-site)",
+      date: "Jun 2023 – Jul 2024, continuing Feb 2025",
       description:
-        "Helped clean and visualize survey data for a public health research project led by a medical lab scientist. Strengthened my analytical and communication skills.",
+        "Supported research on 'Knowledge, Attitude and Preventive Practices of Lassa Fever among Health Care Workers.' Contributed to data collection, SPSS analysis, and final project publication.",
     },
     {
       title: "Media & Tech Volunteer",
-      place: "Living Faith Church, Jahi",
-      date: "Apr 2025 – Present",
+      place: "Church Ministry, Abuja",
+      date: "Ongoing",
       description:
-        "Gained practical experience in graphics design, live streaming, and visual storytelling through weekly technical service and event support.",
+        "Provided technical support during services and events. Assisted with basic media editing and web research for sermons and outreach initiatives.",
     },
     {
-      title: "ICT Intern",
-      place: "NTA (Nigerian Television Authority)",
+      title: "Freelance Web Developer",
+      place: "Remote",
       date: "Jun 2025 – Present",
       description:
-        "Provided IT support, managed hardware and software setups, and assisted in troubleshooting technical issues in a fast-paced broadcast environment.",
+        "Building dynamic web applications using MERN stack. Collaborated with designers to build premium real estate website (stellehomes.com) and film festival website (arewafilmestival.com).",
     },
     {
-      title: "Remote Web Developer",
-      place: "Arewa Film Festival",
-      date: "Jun 2025 – Present",
+      title: "ICT Support Specialist",
+      place: "Nigerian Television Authority (NTA) Abuja",
+      date: "Jun – Aug 2025",
       description:
-        "Developed frontend features, styling, and performance improvements while collaborating with a distributed remote team.",
+        "3-month internship supporting media and tech team with IT tasks and social media content editing. Assisted with day-to-day tech troubleshooting and internal digital support.",
     },
     {
-      title: "Frontend Developer",
-      place: "Stelle Homes",
-      date: "Jul 2025 – Present",
+      title: "ICT and Media Specialist",
+      place: "Faith Academy Day Secondary School, Jahi",
+      date: "Sep 2025 – Present",
+      current: true,
       description:
-        "Collaborated with a UI/UX designer to build a real estate company website, was responsible for responsive design, and building reusable components.",
+        "Setup and maintenance of computer systems. Troubleshooting technical issues and providing IT support. Creating and managing school media (flyers, videos, pictures).",
     },
     {
-      title: "Remote Junior Developer",
-      place: "Startups & Open Source",
-      date: "Feb 2026 – Jun 2026",
+      title: "NYSC Software Engineering Intern",
+      place: "National Information Technology Development Agency (NITDA), Nigeria",
+      date: "Dec 2025 – Present",
+      current: true,
       description:
-        "Contributed to scalable applications and collaborated with remote teams on live production code. Participated in community-led AI and dev tools projects.",
-      future: true,
+        "Learning and building with fellow tech professionals at NITDA. Assisting assigned mentor and carrying out personal development tasks.",
     },
     {
-      title: "Technical Specialist",
-      place: "Global Dev Company",
-      date: "Aug 2026 – Present",
+      title: "Software Engineer & Lead Tech Tutor",
+      place: "Techxagon Academy x Salem Academy",
+      date: "Jan 2026 – Present",
+      current: true,
       description:
-        "Led key deployments, mentored newer devs, and helped shape open infrastructure standards in the African tech ecosystem.",
-      future: true,
+        "Resourceful Software Engineer at TechxagonAcademy (EduTech bringing Africa's first 4IR curriculum to schools). Web Design and Development Tech Instructor for students. Building curriculum and managing Tech Lab infrastructure.",
     },
   ];
 
   const softSkills = [
-    "Team Collaboration",
-    "Data Analysis",
-    "Graphic Design",
-    "Event Coordination",
-    "IT Support",
-    "Broadcasting",
+    "JavaScript & TypeScript",
+    "React & Node.js",
+    "Data Analysis (SPSS, Excel)",
+    "Communication",
+    "Problem Solving",
+    "Teamwork",
   ];
 
   const futureGoals = [
-    "Remote Internships",
-    "Junior Dev Roles",
-    "Tech Startups",
-    "Open Source Projects",
-    "Community-led AI Projects",
+    "Senior Fullstack Engineer",
+    "Lead Tech Teams",
+    "AI-Powered Products",
+    "Open Source Contributions",
+    "Tech Mentorship",
+    "Remote Leadership Roles",
   ];
 
   return (
@@ -108,28 +110,31 @@ export default function Experience() {
               <div
                 aria-hidden="true"
                 className={`absolute -left-3 sm:-left-3.5 top-1 w-3.5 h-3.5 rounded-full border-[3px] ${
-                  exp.future
-                    ? "bg-blue-300 border-dashed dark:bg-blue-600 border-white dark:border-[#1b1b2f]"
+                  exp.current
+                    ? "bg-red-500 border-white dark:border-[#1b1b2f]"
                     : "bg-blue-700 dark:bg-blue-400 border-white dark:border-[#1b1b2f]"
                 }`}
               />
               {/* Line */}
               <div
                 className={`absolute left-0 top-5 h-full ${
-                  exp.future
-                    ? "border-l-2 border-dashed border-blue-200 dark:border-blue-600"
+                  exp.current
+                    ? "border-l-2 border-red-300 dark:border-red-600"
                     : "border-l-2 border-blue-300 dark:border-blue-600"
                 }`}
               />
               {/* Content */}
               <div className="pl-4 sm:pl-5">
-                <h4
-                  className={`text-lg font-semibold mb-1 ${
-                    exp.future ? "opacity-80 italic" : ""
-                  }`}
-                >
-                  {exp.title}
-                </h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-lg font-semibold">
+                    {exp.title}
+                  </h4>
+                  {exp.current && (
+                    <span className="text-xs bg-red-500 text-white px-2 py-1 rounded font-bold">
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
                 <span className="text-sm text-blue-500 dark:text-blue-300 block mb-2">
                   {exp.place} • {exp.date}
                 </span>

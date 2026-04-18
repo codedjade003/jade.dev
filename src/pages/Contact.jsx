@@ -28,7 +28,11 @@ export default function Footer() {
             </p>
             <p className="flex items-center gap-3">
               <Phone size={18} />
-              <span>+2349015845913</span>
+              <a href="https://wa.me/2349015845913" target="_blank" rel="noopener noreferrer" className="hover:text-red-500">+2349015845913 (WhatsApp)</a>
+            </p>
+            <p className="flex items-center gap-3">
+              <Phone size={18} />
+              <span>+2348149720004 (Work)</span>
             </p>
           </div>
 
@@ -38,6 +42,12 @@ export default function Footer() {
             <a aria-label="Instagram" href="https://www.instagram.com/edaj_ma_i/" target="_blank" rel="noopener noreferrer" className="hover:text-red-500"><FaInstagram /></a>
             <a aria-label="WhatsApp" href="https://wa.me/2349015845913" target="_blank" rel="noopener noreferrer" className="hover:text-red-500"><FaWhatsapp /></a>
             <a aria-label="Twitter/X" href="https://x.com/JadeDavidJ94432" target="_blank" rel="noopener noreferrer" className="hover:text-red-500"><FaXTwitter /></a>
+          </div>
+
+          {/* Full URLs for print */}
+          <div className="hidden print:block mt-6 text-sm space-y-1">
+            <p>GitHub: https://github.com/codedjade003</p>
+            <p>LinkedIn: https://www.linkedin.com/in/jade-david-joseph-0274a0272</p>
           </div>
 
           <a

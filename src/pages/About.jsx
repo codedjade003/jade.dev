@@ -53,13 +53,13 @@ export default function About() {
       <h2 className="text-2xl sm:text-3xl font-bold mb-4">About Me</h2>
 
       <p className="max-w-xl text-slate-700 dark:text-blue-300 mb-6 text-sm sm:text-base px-2 sm:px-0">
-        I’m Jade, a passionate Full-Stack Developer and Machine Learning enthusiast.
-        I build modern web apps with React, Node, and Python — and I’m all about clean design,
-        fast performance, and solving real problems.
+        I'm David (Jade), a Full-Stack Developer with expertise in building dynamic, scalable applications.
+        I specialize in the MERN stack and am passionate about creating impactful tools using AI and modern web technologies.
+        Strong foundation in JavaScript, data structures, and collaborative coding with Git/GitHub.
       </p>
 
       <div className="flex flex-wrap justify-center gap-3 text-xs sm:text-sm font-semibold">
-        {['React', 'Tailwind CSS', 'Node.js', 'Python', 'LLaMA Chatbots'].map((skill) => (
+        {['JavaScript', 'TypeScript', 'React.js', 'Node.js', 'Express.js', 'MongoDB', 'Git/GitHub', 'Vercel', 'Netlify', 'Data Analysis'].map((skill) => (
           <span
             key={skill}
             className="bg-blue-100 text-blue-800 px-4 py-2 rounded-full 
