@@ -1,15 +1,99 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Projects() {
   const projectSectionConfig = getProjectSectionConfig();
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0);
+  const [sectionDirection, setSectionDirection] = useState(1);
+  const [cardFlipDirection, setCardFlipDirection] = useState(-1);
+  const [pauseAutoSlide, setPauseAutoSlide] = useState(false);
+  const [headingDragStartX, setHeadingDragStartX] = useState(null);
+  const [cardDragStartX, setCardDragStartX] = useState(null);
+  const [projectIndices, setProjectIndices] = useState(() =>
+    Object.fromEntries(projectSectionConfig.map((section) => [section.key, 0]))
+  );
+
+  const activeSection = projectSectionConfig[activeSectionIndex];
+  const activeProjectCount = activeSection.projects.length;
+  const activeProjectIndex = projectIndices[activeSection.key] ?? 0;
+  const activeProject = activeSection.projects[activeProjectIndex];
+
+  const moveSection = (direction) => {
+    setSectionDirection(direction);
+    setActiveSectionIndex((current) => {
+      const totalSections = projectSectionConfig.length;
+      return (current + direction + totalSections) % totalSections;
+    });
+  };
+
+  const jumpToSection = (index) => {
+    if (index === activeSectionIndex) return;
+    setSectionDirection(index > activeSectionIndex ? 1 : -1);
+    setActiveSectionIndex(index);
+  };
+
+  const moveProject = (direction) => {
+    if (activeProjectCount < 2) return;
+
+    setCardFlipDirection(direction > 0 ? -1 : 1);
+    setProjectIndices((current) => {
+      const next = { ...current };
+      const currentIndex = next[activeSection.key] ?? 0;
+      next[activeSection.key] = (currentIndex + direction + activeProjectCount) % activeProjectCount;
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (activeProjectCount < 2 || pauseAutoSlide) return undefined;
+
+    const timer = setInterval(() => {
+      setCardFlipDirection(-1);
+      setProjectIndices((current) => {
+        const next = { ...current };
+        const currentIndex = next[activeSection.key] ?? 0;
+        next[activeSection.key] = (currentIndex + 1) % activeProjectCount;
+        return next;
+      });
+    }, 7200);
+
+    return () => clearInterval(timer);
+  }, [activeProjectCount, activeSection.key, pauseAutoSlide]);
+
+  const handleHeadingPointerUp = (event) => {
+    if (headingDragStartX === null) return;
+
+    const delta = event.clientX - headingDragStartX;
+    if (Math.abs(delta) > 50) {
+      if (delta < 0) {
+        moveSection(1);
+      } else {
+        moveSection(-1);
+      }
+    }
+    setHeadingDragStartX(null);
+  };
+
+  const handleCardPointerUp = (event) => {
+    if (cardDragStartX === null) return;
+
+    const delta = event.clientX - cardDragStartX;
+    if (Math.abs(delta) > 45) {
+      if (delta < 0) {
+        moveProject(1);
+      } else {
+        moveProject(-1);
+      }
+    }
+    setCardDragStartX(null);
+  };
 
   return (
     <section
       id="projects"
       data-reveal="up"
-      className="scroll-mt-20 px-4 sm:px-6 py-16 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
+      className="scroll-mt-20 px-4 sm:px-6 py-12 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
     >
-      <div className="max-w-6xl mx-auto space-y-8 sm:space-y-10">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-7">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <h2 data-reveal="left" className="text-3xl font-bold">
             Projects
@@ -19,17 +103,159 @@ export default function Projects() {
             style={{ "--reveal-delay": "120ms" }}
             className="text-sm text-slate-600 dark:text-slate-400"
           >
-            Flick each rail to browse. Two cards at a time, always looping.
+            Swipe categories sideways. One project card per view.
           </p>
         </div>
 
-        {projectSectionConfig.map((section, sectionIndex) => (
-          <ProjectCarouselSection
-            key={section.key}
-            section={section}
-            revealDelay={sectionIndex * 90}
-          />
-        ))}
+        <div
+          data-reveal="up"
+          style={{ "--reveal-delay": "140ms" }}
+          className="rounded-3xl border border-blue-100 dark:border-blue-900/60 bg-slate-50/70 dark:bg-[#21213a] p-4 sm:p-6"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => moveSection(-1)}
+              type="button"
+              aria-label="Previous project category"
+              className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-xs sm:text-sm hover:border-red-500 hover:text-red-500 transition-colors"
+            >
+              Prev Group
+            </button>
+
+            <span className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+              Project Groups
+            </span>
+
+            <button
+              onClick={() => moveSection(1)}
+              type="button"
+              aria-label="Next project category"
+              className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-xs sm:text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
+            >
+              Next Group
+            </button>
+          </div>
+
+          <div
+            className="project-flick-surface mt-4"
+            onPointerDown={(event) => setHeadingDragStartX(event.clientX)}
+            onPointerUp={handleHeadingPointerUp}
+            onPointerCancel={() => setHeadingDragStartX(null)}
+            onPointerLeave={() => setHeadingDragStartX(null)}
+          >
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {projectSectionConfig.map((section, index) => {
+                const isActive = index === activeSectionIndex;
+
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    onClick={() => jumpToSection(index)}
+                    aria-pressed={isActive}
+                    className={`shrink-0 rounded-xl px-4 py-2 text-left border transition-colors min-w-[180px] ${
+                      isActive
+                        ? "bg-blue-700 text-white border-blue-700 dark:bg-blue-500 dark:border-blue-500"
+                        : "bg-white/80 border-blue-200 text-blue-800 dark:bg-slate-800 dark:border-blue-900 dark:text-blue-200 hover:border-red-400 hover:text-red-500"
+                    }`}
+                  >
+                    <p className="font-semibold text-sm">{section.title}</p>
+                    <p className={`text-xs ${isActive ? "text-blue-100" : "text-slate-500 dark:text-slate-400"}`}>
+                      {section.projects.length} projects
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div
+            key={activeSection.key}
+            className="mt-4 rounded-2xl border border-blue-100 dark:border-slate-700 bg-white/90 dark:bg-slate-900/25 p-4 sm:p-5 flip-enter"
+            style={{ "--flip-angle": `${sectionDirection > 0 ? -14 : 14}deg` }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <h3 className="text-2xl font-semibold">{activeSection.title}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{activeSection.hint}</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => moveProject(-1)}
+                  type="button"
+                  aria-label={`Previous ${activeSection.title} project`}
+                  className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => moveProject(1)}
+                  type="button"
+                  aria-label={`Next ${activeSection.title} project`}
+                  className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <div
+              className="project-flick-surface mt-5"
+              onMouseEnter={() => setPauseAutoSlide(true)}
+              onMouseLeave={() => {
+                setPauseAutoSlide(false);
+                setCardDragStartX(null);
+              }}
+            >
+              <div
+                tabIndex={0}
+                role="region"
+                aria-label={`${activeSection.title} project carousel`}
+                onPointerDown={(event) => setCardDragStartX(event.clientX)}
+                onPointerUp={handleCardPointerUp}
+                onPointerCancel={() => setCardDragStartX(null)}
+                onPointerLeave={() => setCardDragStartX(null)}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowRight") moveProject(1);
+                  if (event.key === "ArrowLeft") moveProject(-1);
+                }}
+                className="outline-none"
+              >
+                <div
+                  key={`${activeSection.key}-${activeProject.title}-${activeProjectIndex}`}
+                  style={{ "--flip-angle": `${cardFlipDirection < 0 ? -18 : 18}deg` }}
+                  className="flip-enter"
+                >
+                  <ProjectCard
+                    project={activeProject}
+                    type={activeSection.type}
+                    originIndex={activeProjectIndex}
+                    totalProjects={activeProjectCount}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>
+                  {activeProjectIndex + 1} of {activeProjectCount}
+                </span>
+                <span>Swipe card to loop</span>
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-start sm:justify-end">
+              <a
+                href={activeSection.viewMoreHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-700 text-white hover:bg-red-500 dark:bg-blue-500 dark:hover:bg-red-400 transition-colors"
+              >
+                {activeSection.viewMoreLabel}
+              </a>
+            </div>
+          </div>
+        </div>
 
         <p
           data-reveal="up"
@@ -49,166 +275,6 @@ export default function Projects() {
         </p>
       </div>
     </section>
-  );
-}
-
-function ProjectCarouselSection({ section, revealDelay }) {
-  const { title, hint, type, projects, align, viewMoreLabel, viewMoreHref } = section;
-  const totalProjects = projects.length;
-  const cardsPerView = Math.min(2, totalProjects);
-
-  const [startIndex, setStartIndex] = useState(0);
-  const [flipDirection, setFlipDirection] = useState(-1);
-  const [dragStartX, setDragStartX] = useState(null);
-  const [pauseAutoSlide, setPauseAutoSlide] = useState(false);
-
-  const shiftNext = () => {
-    if (totalProjects < 2) return;
-    setFlipDirection(-1);
-    setStartIndex((current) => (current + 1) % totalProjects);
-  };
-
-  const shiftPrev = () => {
-    if (totalProjects < 2) return;
-    setFlipDirection(1);
-    setStartIndex((current) => (current - 1 + totalProjects) % totalProjects);
-  };
-
-  useEffect(() => {
-    if (totalProjects < 2 || pauseAutoSlide) return undefined;
-
-    const timer = setInterval(() => {
-      setFlipDirection(-1);
-      setStartIndex((current) => (current + 1) % totalProjects);
-    }, 6800);
-
-    return () => clearInterval(timer);
-  }, [pauseAutoSlide, totalProjects]);
-
-  const visibleProjects = useMemo(() => {
-    return Array.from({ length: cardsPerView }, (_, offset) => {
-      const nextIndex = (startIndex + offset) % totalProjects;
-      return {
-        project: projects[nextIndex],
-        originIndex: nextIndex,
-      };
-    });
-  }, [cardsPerView, projects, startIndex, totalProjects]);
-
-  const handlePointerDown = (event) => {
-    if (totalProjects < 2) return;
-    setDragStartX(event.clientX);
-  };
-
-  const handlePointerUp = (event) => {
-    if (totalProjects < 2 || dragStartX === null) return;
-
-    const delta = event.clientX - dragStartX;
-    if (Math.abs(delta) > 45) {
-      if (delta < 0) {
-        shiftNext();
-      } else {
-        shiftPrev();
-      }
-    }
-    setDragStartX(null);
-  };
-
-  return (
-    <div
-      data-reveal={align === "right" ? "right" : "left"}
-      style={{ "--reveal-delay": `${revealDelay}ms` }}
-      className="rounded-3xl border border-blue-100 dark:border-blue-900/60 bg-slate-50/70 dark:bg-[#21213a] p-5 sm:p-6"
-    >
-      <div
-        className={`flex flex-col sm:flex-row gap-3 sm:items-end ${
-          align === "right" ? "sm:flex-row-reverse" : ""
-        }`}
-      >
-        <div className={align === "right" ? "text-left sm:text-right" : "text-left"}>
-          <h3 className="text-2xl font-semibold">{title}</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400">{hint}</p>
-        </div>
-
-        <div className={`flex items-center gap-2 ${align === "right" ? "sm:mr-auto" : "sm:ml-auto"}`}>
-          <button
-            onClick={shiftPrev}
-            type="button"
-            aria-label={`Previous ${title} projects`}
-            className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors"
-          >
-            Prev
-          </button>
-          <button
-            onClick={shiftNext}
-            type="button"
-            aria-label={`Next ${title} projects`}
-            className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-
-      <div
-        className="project-flick-surface mt-6"
-        onMouseEnter={() => setPauseAutoSlide(true)}
-        onMouseLeave={() => {
-          setPauseAutoSlide(false);
-          setDragStartX(null);
-        }}
-      >
-        <div
-          tabIndex={0}
-          role="region"
-          aria-label={`${title} project carousel`}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={() => setDragStartX(null)}
-          onPointerLeave={() => setDragStartX(null)}
-          onKeyDown={(event) => {
-            if (event.key === "ArrowRight") shiftNext();
-            if (event.key === "ArrowLeft") shiftPrev();
-          }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-6 outline-none"
-        >
-          {visibleProjects.map(({ project, originIndex }, slotIndex) => (
-            <div
-              key={`${project.title}-${startIndex}-${slotIndex}`}
-              style={{
-                "--flip-angle": `${flipDirection < 0 ? -18 : 18}deg`,
-              }}
-              className="flip-enter"
-            >
-              <ProjectCard
-                project={project}
-                type={type}
-                originIndex={originIndex}
-                totalProjects={totalProjects}
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <span>
-            Showing {cardsPerView} of {totalProjects}
-          </span>
-          <span>Flick left or right to loop</span>
-        </div>
-      </div>
-
-      <div className={`mt-5 flex ${align === "right" ? "justify-end" : "justify-start"}`}>
-        <a
-          href={viewMoreHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-blue-700 text-white hover:bg-red-500 dark:bg-blue-500 dark:hover:bg-red-400 transition-colors"
-        >
-          {viewMoreLabel}
-        </a>
-      </div>
-    </div>
   );
 }
 
