@@ -141,6 +141,54 @@ export default function Projects() {
     }
   };
 
+  // Touch fallbacks for browsers that don't support Pointer Events (older iOS Safari)
+  const handleProjectTouchStart = (e) => {
+    if (!e.touches || !e.touches[0]) return;
+    const t = e.touches[0];
+    if (isInteractiveTarget(t.target)) return;
+
+    projectDragRef.current = {
+      active: true,
+      dragging: false,
+      startX: t.clientX,
+      startY: t.clientY,
+    };
+  };
+
+  const handleProjectTouchMove = (e) => {
+    const state = projectDragRef.current;
+    if (!state.active || !e.touches || !e.touches[0]) return;
+
+    const t = e.touches[0];
+    const deltaX = t.clientX - state.startX;
+    const deltaY = t.clientY - state.startY;
+
+    if (!state.dragging) {
+      if (Math.abs(deltaX) < 8) return;
+      if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+      state.dragging = true;
+      setIsProjectDragging(true);
+    }
+
+    setProjectDragOffset(clamp(deltaX, -180, 180));
+  };
+
+  const handleProjectTouchEnd = (e) => {
+    const state = projectDragRef.current;
+    if (!state.active) return;
+
+    const ct = e.changedTouches && e.changedTouches[0];
+    const deltaX = ct ? ct.clientX - state.startX : 0;
+    const wasDragging = state.dragging;
+    resetProjectDrag();
+
+    if (!wasDragging) return;
+
+    if (Math.abs(deltaX) > 65) {
+      moveProject(deltaX < 0 ? 1 : -1, { feedback: "swipe" });
+    }
+  };
+
   const handleProjectPointerMove = (event) => {
     const state = projectDragRef.current;
     if (!state.active) return;
@@ -347,6 +395,10 @@ export default function Projects() {
                     resetProjectDrag();
                   }
                 }}
+                onTouchStart={handleProjectTouchStart}
+                onTouchMove={handleProjectTouchMove}
+                onTouchEnd={handleProjectTouchEnd}
+                onTouchCancel={resetProjectDrag}
                 onKeyDown={(event) => {
                   if (event.key === "ArrowRight") moveProject(1, { feedback: "tap" });
                   if (event.key === "ArrowLeft") moveProject(-1, { feedback: "tap" });
@@ -467,6 +519,68 @@ function SectionFlipCategoryCard({
     import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
   };
 
+  // Touch fallbacks for SectionFlipCategoryCard (for browsers without Pointer Events)
+  const handleTouchStart = (e) => {
+    if (!isMobile || !e.touches || !e.touches[0]) return;
+    const t = e.touches[0];
+
+    pointerStartRef.current = {
+      x: t.clientX,
+      y: t.clientY,
+      dragging: false,
+    };
+
+    // Feedback for touch start
+    import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isMobile || !e.touches || !e.touches[0] || !pointerStartRef.current) return;
+    const t = e.touches[0];
+
+    const deltaX = t.clientX - pointerStartRef.current.x;
+    const deltaY = t.clientY - pointerStartRef.current.y;
+
+    if (!pointerStartRef.current.dragging) {
+      if (Math.abs(deltaX) < 8) return;
+      if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+      pointerStartRef.current.dragging = true;
+      onDragStart();
+      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
+    }
+
+    if (pointerStartRef.current.dragging) {
+      onDragMove(deltaX);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!isMobile) return;
+    const ct = e.changedTouches && e.changedTouches[0];
+    if (!ct) {
+      pointerStartRef.current = null;
+      return;
+    }
+
+    const deltaX = ct.clientX - (pointerStartRef.current?.x ?? 0);
+    const deltaY = ct.clientY - (pointerStartRef.current?.y ?? 0);
+    const wasDragging = pointerStartRef.current?.dragging;
+    pointerStartRef.current = null;
+
+    const dragConsumed = onDragEnd(deltaX, wasDragging);
+    if (dragConsumed) {
+      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
+      return;
+    }
+
+    if (Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12) {
+      if (isCenter) {
+        onTapFlip();
+      }
+    }
+  };
+
   const handlePointerMove = (event) => {
     if (!isMobile || event.pointerType !== "touch" || !pointerStartRef.current) return;
 
@@ -526,6 +640,13 @@ function SectionFlipCategoryCard({
         onDragEnd(0, false);
       }}
       onPointerLeave={() => {
+        pointerStartRef.current = null;
+        onDragEnd(0, false);
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => {
         pointerStartRef.current = null;
         onDragEnd(0, false);
       }}

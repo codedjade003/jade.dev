@@ -12,6 +12,7 @@ import Loader from './components/Loader';
 import ScrollToggle from './components/ScrollToggle';
 import NotFound from './pages/NotFound';
 import MotionBackdrop from './components/MotionBackdrop';
+import { unlockAudioContext } from './utils/interactionFeedback';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -63,6 +64,25 @@ function App() {
 
     return () => observer.disconnect();
   }, [loading]);
+
+  // Unlock audio context on first user gesture so audio fallbacks can work on mobile browsers
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        unlockAudioContext();
+      } catch (e) {}
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('mousedown', unlock);
+    };
+
+    document.addEventListener('touchstart', unlock, { passive: true, once: true });
+    document.addEventListener('mousedown', unlock, { passive: true, once: true });
+
+    return () => {
+      document.removeEventListener('touchstart', unlock);
+      document.removeEventListener('mousedown', unlock);
+    };
+  }, []);
 
   if (loading) return <Loader />;
 

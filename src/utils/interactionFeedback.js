@@ -51,9 +51,9 @@ function triggerVibration(kind = "tap") {
       vibrated = navigator.vibrate(10);
     }
   }
-
-  // iOS Safari does not support vibration; fallback: play a short click sound if not vibrated
-  if (!vibrated && typeof window !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+  // If vibration API didn't run (or isn't present), attempt an audio fallback.
+  // Note: Audio playback may be blocked until the page has received a user gesture.
+  if (!vibrated && typeof window !== "undefined") {
     try {
       const ctx = getAudioContext();
       if (ctx) {
@@ -72,6 +72,15 @@ function triggerVibration(kind = "tap") {
     } catch (e) {
       // ignore
     }
+  }
+}
+
+// Provide a public unlock function so the app can create/resume the AudioContext
+export function unlockAudioContext() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
   }
 }
 
