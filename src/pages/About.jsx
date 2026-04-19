@@ -41,15 +41,19 @@ export default function About() {
       bg-transparent text-blue-800
       dark:text-blue-300 transition-colors duration-300"
     >
-      <img
+      <div
         data-reveal="zoom"
-        src={ProfileImage}
-        alt="Jade profile"
-        onClick={handleProfileClick}
-        className="w-28 h-28 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full object-cover 
-        border-4 border-blue-800 dark:border-blue-300 mb-6 cursor-pointer transition-transform hover:scale-105"
+        className="mb-6 cursor-pointer rounded-full overflow-hidden border-4 border-blue-800 dark:border-blue-300 transition-transform hover:scale-105"
+        style={{ width: '7rem', height: '7rem' }}
         title="Click me 5 times 😉"
-      />
+        onClick={handleProfileClick}
+      >
+        <img
+          src={ProfileImage}
+          alt="Jade profile"
+          className="w-full h-full object-cover block"
+        />
+      </div>
 
       <h2 data-reveal="left" style={{ "--reveal-delay": "100ms" }} className="text-2xl sm:text-3xl font-bold mb-4">About Me</h2>
 

@@ -270,7 +270,8 @@ export default function Projects() {
           </div>
 
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 md:hidden">
-            Tap to flip. Drag to swipe with momentum.
+            <span role="img" aria-label="swipe" className="mr-1">👉</span>
+            Tap to flip. <strong>Swipe sideways</strong> to change category or project.
           </p>
 
           <div className="mt-2 flex justify-center gap-2">
@@ -462,6 +463,8 @@ function SectionFlipCategoryCard({
     if (typeof event.currentTarget.setPointerCapture === "function") {
       event.currentTarget.setPointerCapture(event.pointerId);
     }
+    // Always trigger feedback on touch start
+    import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
   };
 
   const handlePointerMove = (event) => {
@@ -476,6 +479,8 @@ function SectionFlipCategoryCard({
 
       pointerStartRef.current.dragging = true;
       onDragStart();
+      // Feedback for swipe start
+      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
     }
 
     if (pointerStartRef.current.dragging) {
@@ -493,6 +498,8 @@ function SectionFlipCategoryCard({
 
     const dragConsumed = onDragEnd(deltaX, wasDragging);
     if (dragConsumed) {
+      // Feedback for swipe end
+      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
       return;
     }
 

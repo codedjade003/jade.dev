@@ -9,7 +9,18 @@ export default function Home() {
       <div data-reveal="zoom" className="max-w-3xl">
         <h1 data-reveal="left" className="text-4xl md:text-6xl font-extrabold mb-4 flex items-center justify-center gap-3">
           Hi, I’m Jade
-          <span className="inline-block animate-pulse hover:animate-none cursor-pointer active:scale-75 active:rotate-12 transition-transform duration-200">
+          <span
+            className="inline-block animate-pulse hover:animate-none cursor-pointer active:scale-75 active:rotate-12 transition-transform duration-200"
+            onClick={() => {
+              import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
+            }}
+            onTouchEnd={() => {
+              import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
+            }}
+            tabIndex={0}
+            aria-label="Wave hello"
+            role="button"
+          >
             👋
           </span>
         </h1>

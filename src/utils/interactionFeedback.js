@@ -40,18 +40,49 @@ function playTapTone(kind = "tap") {
   oscillator.stop(now + (kind === "swipe" ? 0.085 : 0.06));
 }
 
-function triggerVibration(kind = "tap") {
-  if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") return;
 
-  if (kind === "swipe") {
-    navigator.vibrate([8, 18, 10]);
-    return;
+function triggerVibration(kind = "tap") {
+  // Try vibration API first
+  let vibrated = false;
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    if (kind === "swipe") {
+      vibrated = navigator.vibrate([8, 18, 10]);
+    } else {
+      vibrated = navigator.vibrate(10);
+    }
   }
 
-  navigator.vibrate(10);
+  // iOS Safari does not support vibration; fallback: play a short click sound if not vibrated
+  if (!vibrated && typeof window !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    try {
+      const ctx = getAudioContext();
+      if (ctx) {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.setValueAtTime(kind === "swipe" ? 120 : 180, now);
+        gain.gain.setValueAtTime(0.04, now);
+        gain.gain.linearRampToValueAtTime(0.0001, now + 0.04);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.045);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
 }
 
 export function triggerInteractionFeedback(kind = "tap") {
+  // Debug log for feedback
+  if (typeof window !== "undefined") {
+    if (window.__DEBUG_FEEDBACK) {
+      // eslint-disable-next-line no-console
+      console.log("[Feedback]", kind, { time: Date.now() });
+    }
+  }
   triggerVibration(kind);
   playTapTone(kind);
 }

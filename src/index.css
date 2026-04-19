@@ -1,6 +1,24 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  --site-backdrop-color: #ffffff;
+  --site-backdrop:
+    radial-gradient(circle at 18% 24%, rgba(56, 189, 248, 0.15), transparent 40%),
+    radial-gradient(circle at 82% 12%, rgba(248, 113, 113, 0.11), transparent 36%),
+    radial-gradient(circle at 50% 76%, rgba(99, 102, 241, 0.09), transparent 46%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.9));
+}
+
+html.dark {
+  --site-backdrop-color: #14172c;
+  --site-backdrop:
+    radial-gradient(circle at 20% 30%, rgba(96, 165, 250, 0.2), transparent 42%),
+    radial-gradient(circle at 78% 20%, rgba(248, 113, 113, 0.16), transparent 38%),
+    radial-gradient(circle at 52% 72%, rgba(129, 140, 248, 0.14), transparent 46%),
+    linear-gradient(165deg, rgba(20, 23, 44, 0.98), rgba(24, 26, 52, 0.95));
+}
+
 html,
 body,
 #root {
@@ -13,19 +31,62 @@ body {
   padding: 0;
 }
 
+/* Prevent accidental horizontal overflow on small screens which can create edge gaps */
+@media (max-width: 767px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* Additional mobile-protective rules to prevent overlays and elements from producing horizontal overflow */
+@media (pointer: coarse) {
+  html, body, #root {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Ensure media elements don't overflow the viewport on mobile */
+  img, video, canvas, iframe {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Strong guard for the mobile menu overlay to avoid transform/width issues */
+  .mobile-menu-overlay {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    transform: none !important;
+    will-change: auto !important;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-sizing: border-box;
+  }
+}
+
 html {
   scroll-behavior: smooth;
-  background-color: #ffffff;
+  background-color: var(--site-backdrop-color);
+  background-image: var(--site-backdrop);
+  background-repeat: no-repeat;
+  background-size: cover;
   color-scheme: light;
 }
 
 html.dark {
-  background-color: #1b1b2f;
+  background-color: var(--site-backdrop-color);
   color-scheme: dark;
 }
 
 body {
-  background-color: transparent;
+  background-color: var(--site-backdrop-color);
+  background-image: var(--site-backdrop);
+  background-repeat: no-repeat;
+  background-size: cover;
   transition: background-color 240ms ease, color 240ms ease;
 }
 
@@ -241,19 +302,7 @@ html.theme-switching *::after {
 .section-motion-backdrop__base {
   position: absolute;
   inset: -8%;
-  background:
-    radial-gradient(circle at 18% 24%, rgba(56, 189, 248, 0.15), transparent 40%),
-    radial-gradient(circle at 82% 12%, rgba(248, 113, 113, 0.11), transparent 36%),
-    radial-gradient(circle at 50% 76%, rgba(99, 102, 241, 0.09), transparent 46%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.9));
-}
-
-.dark .section-motion-backdrop__base {
-  background:
-    radial-gradient(circle at 20% 30%, rgba(96, 165, 250, 0.2), transparent 42%),
-    radial-gradient(circle at 78% 20%, rgba(248, 113, 113, 0.16), transparent 38%),
-    radial-gradient(circle at 52% 72%, rgba(129, 140, 248, 0.14), transparent 46%),
-    linear-gradient(165deg, rgba(20, 23, 44, 0.98), rgba(24, 26, 52, 0.95));
+  background: var(--site-backdrop);
 }
 
 .motion-scene {

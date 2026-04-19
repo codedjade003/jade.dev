@@ -106,11 +106,22 @@ export default function Navbar({ darkMode, setDarkMode }) {
   useEffect(() => {
     if (!mobileMenuOpen) return undefined;
 
-    const previousOverflow = document.body.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevDocOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflowX = document.body.style.overflowX;
+    const prevDocOverflowX = document.documentElement.style.overflowX;
+
+    // Prevent background scrolling and horizontal overflow while mobile menu is open
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflowX = "hidden";
+    document.documentElement.style.overflowX = "hidden";
 
     return () => {
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevDocOverflow;
+      document.body.style.overflowX = prevBodyOverflowX;
+      document.documentElement.style.overflowX = prevDocOverflowX;
     };
   }, [mobileMenuOpen]);
 
@@ -141,7 +152,12 @@ export default function Navbar({ darkMode, setDarkMode }) {
       <nav
         onMouseEnter={queueDesktopShow}
         onMouseLeave={queueDesktopHide}
-        className={`sticky top-0 z-[80] w-full flex justify-between items-center px-6 py-4 ${mobileNavSurface} ${navShadow} text-blue-800 dark:text-blue-300 backdrop-blur-md transition-[background-color,color,border-color,box-shadow] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:transition-transform md:duration-700 md:ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        style={{
+          paddingLeft: `calc(1.5rem + env(safe-area-inset-left, 0px))`,
+          paddingRight: `calc(1.5rem + env(safe-area-inset-right, 0px))`,
+          paddingTop: `calc(1rem + env(safe-area-inset-top, 0px))`,
+        }}
+        className={`fixed top-0 inset-x-0 z-[80] w-full flex justify-between items-center px-6 py-4 ${mobileNavSurface} ${navShadow} text-blue-800 dark:text-blue-300 backdrop-blur-md transition-[background-color,color,border-color,box-shadow] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:sticky md:top-0 md:transition-transform md:duration-700 md:ease-[cubic-bezier(0.16,1,0.3,1)] ${
           isAtTop
             ? ""
             : "md:fixed md:inset-x-0 md:top-0"
@@ -208,8 +224,24 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-[75] bg-white/95 dark:bg-[#1b1b2f]/95 backdrop-blur-md border-t border-blue-100 dark:border-blue-900/60 overflow-y-auto">
-          <div className="px-6 pt-[84px] pb-6 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3">
+        <div
+          className="mobile-menu-overlay md:hidden fixed inset-0 z-[75] bg-white/95 dark:bg-[#1b1b2f]/95 backdrop-blur-md border-t border-blue-100 dark:border-blue-900/60 overflow-y-auto"
+          style={{
+            boxSizing: 'border-box',
+            WebkitOverflowScrolling: 'touch',
+            // avoid width:100vw which can cause horizontal overflow on some mobile browsers
+          }}
+        >
+          <div
+            className="px-6 pt-[84px] pb-6 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3"
+            style={{
+              paddingLeft: `calc(1.5rem + env(safe-area-inset-left, 0px))`,
+              paddingRight: `calc(1.5rem + env(safe-area-inset-right, 0px))`,
+              paddingTop: `calc(84px + env(safe-area-inset-top, 0px))`,
+              boxSizing: 'border-box',
+              width: '100%',
+            }}
+          >
             {["home", "projects", "experience", "music", "about", "contact"].map((section) => (
               <a
                 key={section}
