@@ -1,23 +1,40 @@
 import { useEffect, useState } from 'react';
+import { triggerInteractionFeedback } from '../utils/interactionFeedback';
 
 export default function ScrollToggle() {
   const [atBottom, setAtBottom] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const fullHeight = document.body.scrollHeight;
+    let frame = null;
 
-      // if we're within 100px of bottom
-      setAtBottom(scrollY + windowHeight >= fullHeight - 100);
+    const handleScroll = () => {
+      if (frame) return;
+
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+
+        const scrollY = window.scrollY;
+        const windowHeight = window.innerHeight;
+        const fullHeight = document.documentElement.scrollHeight;
+        const nextAtBottom = scrollY + windowHeight >= fullHeight - 100;
+
+        setAtBottom((current) => (current === nextAtBottom ? current : nextAtBottom));
+      });
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+    };
   }, []);
 
   const handleClick = () => {
+    triggerInteractionFeedback('tap');
+
     if (atBottom) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {

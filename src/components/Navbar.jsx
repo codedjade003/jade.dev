@@ -1,6 +1,7 @@
 import { Moon, Sun, Heart, Copy, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog } from "@headlessui/react";
+import { triggerInteractionFeedback } from "../utils/interactionFeedback";
 
 
 
@@ -12,8 +13,23 @@ export default function Navbar({ darkMode, setDarkMode }) {
   const [desktopMenuVisible, setDesktopMenuVisible] = useState(false);
   const showTimerRef = useRef(null);
   const hideTimerRef = useRef(null);
+  const themeTimerRef = useRef(null);
 
-  const toggleTheme = () => setDarkMode(!darkMode);
+  const toggleTheme = () => {
+    triggerInteractionFeedback("tap");
+
+    if (themeTimerRef.current) {
+      clearTimeout(themeTimerRef.current);
+    }
+
+    document.documentElement.classList.add("theme-switching");
+    setDarkMode(!darkMode);
+
+    themeTimerRef.current = setTimeout(() => {
+      document.documentElement.classList.remove("theme-switching");
+      themeTimerRef.current = null;
+    }, 420);
+  };
 
   const clearDesktopTimers = () => {
     if (showTimerRef.current) {
@@ -62,7 +78,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
   useEffect(() => {
     const handleScroll = () => {
       const atTop = window.scrollY <= 16;
-      setIsAtTop(atTop);
+      setIsAtTop((current) => (current === atTop ? current : atTop));
       if (atTop) {
         clearDesktopTimers();
         setDesktopMenuVisible(false);
@@ -79,6 +95,15 @@ export default function Navbar({ darkMode, setDarkMode }) {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (themeTimerRef.current) {
+        clearTimeout(themeTimerRef.current);
+      }
+      document.documentElement.classList.remove("theme-switching");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!mobileMenuOpen) return undefined;
 
     const previousOverflow = document.body.style.overflow;
@@ -90,12 +115,17 @@ export default function Navbar({ darkMode, setDarkMode }) {
   }, [mobileMenuOpen]);
 
   const handleCopy = (label, value) => {
+    triggerInteractionFeedback("tap");
     navigator.clipboard.writeText(value);
     setCopied(label);
     setTimeout(() => setCopied(null), 1500);
   };
 
   const desktopNavVisible = isAtTop || desktopMenuVisible;
+  const mobileNavSurface = mobileMenuOpen
+    ? "bg-white/95 dark:bg-[#1b1b2f]/95 border-b border-blue-100 dark:border-blue-900/60"
+    : "bg-transparent dark:bg-transparent";
+  const navShadow = mobileMenuOpen || !isAtTop ? "shadow-sm" : "shadow-none";
 
   return (
     <>
@@ -111,17 +141,17 @@ export default function Navbar({ darkMode, setDarkMode }) {
       <nav
         onMouseEnter={queueDesktopShow}
         onMouseLeave={queueDesktopHide}
-        className={`sticky top-0 z-[80] w-full flex justify-between items-center px-6 py-4 bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300 md:transition-transform md:duration-700 md:ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          isAtTop ? "shadow-none" : "shadow-sm"
-        } ${
+        className={`sticky top-0 z-[80] w-full flex justify-between items-center px-6 py-4 ${mobileNavSurface} ${navShadow} text-blue-800 dark:text-blue-300 backdrop-blur-md transition-[background-color,color,border-color,box-shadow] duration-[340ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:transition-transform md:duration-700 md:ease-[cubic-bezier(0.16,1,0.3,1)] ${
           isAtTop
-            ? "md:backdrop-blur-none"
-            : "md:fixed md:inset-x-0 md:top-0 md:backdrop-blur-sm md:bg-white/95 md:dark:bg-[#1b1b2f]/95"
+            ? ""
+            : "md:fixed md:inset-x-0 md:top-0"
         } ${desktopNavVisible ? "md:translate-y-0" : "md:-translate-y-full"}`}
       >
-        <h1 data-reveal="left" className="text-xl font-bold tracking-tight">
-          Jade<span className="text-red-500">.dev</span>
-        </h1>
+        <a href="#home" data-reveal="left" className="flex items-center gap-2 group cursor-pointer active:scale-95 transition-transform duration-200">
+          <h1 className="text-xl font-bold tracking-tight">
+            Jade<span className="text-red-500">.dev</span>
+          </h1>
+        </a>
 
         {/* Desktop menu */}
         <div
@@ -129,7 +159,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
           style={{ "--reveal-delay": "60ms" }}
           className="hidden md:flex items-center gap-6 font-medium"
         >
-          {["home", "about", "projects", "experience", "music", "contact"].map((section) => (
+          {["home", "projects", "experience", "music", "about", "contact"].map((section) => (
             <a
               key={section}
               href={`#${section}`}
@@ -140,13 +170,16 @@ export default function Navbar({ darkMode, setDarkMode }) {
           ))}
 
           <button
-            onClick={() => setIsOpen(true)}
+            onClick={() => {
+              triggerInteractionFeedback("tap");
+              setIsOpen(true);
+            }}
             className="flex items-center gap-1 text-red-500 hover:scale-105 transition"
           >
             <Heart size={16} /> Tip Jar
           </button>
 
-          <button onClick={toggleTheme} className="p-2" aria-label="Toggle Theme">
+          <button onClick={toggleTheme} className="p-2 active:scale-75 active:rotate-12 transition-all duration-200" aria-label="Toggle Theme">
             {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
@@ -157,12 +190,15 @@ export default function Navbar({ darkMode, setDarkMode }) {
           style={{ "--reveal-delay": "80ms" }}
           className="md:hidden flex items-center gap-3"
         >
-          <button onClick={toggleTheme} aria-label="Toggle Theme">
+          <button onClick={toggleTheme} aria-label="Toggle Theme" className="active:scale-75 active:rotate-12 transition-all duration-200">
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
           <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="text-blue-800 dark:text-blue-300"
+            onClick={() => {
+              triggerInteractionFeedback("tap");
+              setMobileMenuOpen(!mobileMenuOpen);
+            }}
+            className="text-blue-800 dark:text-blue-300 active:scale-75 active:rotate-12 transition-all duration-200"
             aria-label="Toggle Mobile Menu"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -172,21 +208,17 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
       {/* Mobile menu dropdown */}
       {mobileMenuOpen && (
-        <>
-          <button
-            type="button"
-            aria-label="Close mobile menu backdrop"
-            className="md:hidden fixed inset-0 top-[72px] z-[73] bg-black/30"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-
-          <div className="md:hidden fixed inset-x-0 top-[72px] z-[75] bg-white/95 dark:bg-[#1b1b2f]/95 backdrop-blur-sm px-6 py-5 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3 border-b border-blue-100 dark:border-blue-900/60 shadow-xl max-h-[calc(100vh-72px)] overflow-y-auto">
-            {["home", "about", "projects", "experience", "music", "contact"].map((section) => (
+        <div className="md:hidden fixed inset-0 z-[75] bg-white/95 dark:bg-[#1b1b2f]/95 backdrop-blur-md border-t border-blue-100 dark:border-blue-900/60 overflow-y-auto">
+          <div className="px-6 pt-[84px] pb-6 text-sm font-medium text-blue-800 dark:text-blue-300 space-y-3">
+            {["home", "projects", "experience", "music", "about", "contact"].map((section) => (
               <a
                 key={section}
                 href={`#${section}`}
                 className="block capitalize hover:text-red-500 transition"
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => {
+                  triggerInteractionFeedback("tap");
+                  setMobileMenuOpen(false);
+                }}
               >
                 {section}
               </a>
@@ -194,6 +226,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
 
             <button
               onClick={() => {
+                triggerInteractionFeedback("tap");
                 setIsOpen(true);
                 setMobileMenuOpen(false);
               }}
@@ -202,7 +235,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
               <Heart size={16} /> Tip Jar
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {/* Modal */}
@@ -243,7 +276,10 @@ export default function Navbar({ darkMode, setDarkMode }) {
             </div>
 
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                triggerInteractionFeedback("tap");
+                setIsOpen(false);
+              }}
               className="mt-6 w-full bg-blue-700 dark:bg-blue-500 text-white rounded py-2 font-semibold hover:bg-red-500 dark:hover:bg-red-400 transition"
             >
               Close

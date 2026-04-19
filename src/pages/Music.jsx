@@ -32,8 +32,7 @@ export default function Music() {
   return (
     <section
       id="music"
-      data-reveal="up"
-      className="min-h-screen scroll-mt-20 px-4 sm:px-6 py-16 bg-white text-blue-900 dark:bg-[#1b1b2f] dark:text-blue-200 transition-colors duration-300"
+      className="min-h-screen scroll-mt-20 px-4 sm:px-6 py-16 bg-transparent text-blue-900 dark:text-blue-200 transition-colors duration-300"
     >
       <div className="max-w-5xl mx-auto pr-0 md:pr-16">
         <h2 data-reveal="right" className="text-3xl font-bold mb-2 text-right">🎵 Music</h2>

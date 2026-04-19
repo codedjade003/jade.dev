@@ -82,8 +82,7 @@ export default function Experience() {
   return (
     <section
       id="experience"
-      data-reveal="up"
-      className="min-h-screen px-4 sm:px-6 py-16 bg-white text-blue-900 dark:bg-[#1b1b2f] dark:text-blue-200 transition-colors duration-300"
+      className="min-h-screen px-4 sm:px-6 py-16 bg-transparent text-blue-900 dark:text-blue-200 transition-colors duration-300"
     >
       <div className="max-w-6xl mx-auto">
         <h2 data-reveal="left" className="text-3xl font-bold mb-8 text-left">Experience & Growth Journey</h2>

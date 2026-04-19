@@ -2,14 +2,16 @@ export default function Home() {
   return (
     <section
       id="home"
-      data-reveal="up"
-      className="min-h-screen scroll-mt-20 flex items-center justify-center text-center px-4 sm:px-6 
-      bg-white text-blue-800 
-      dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
+      className="min-h-[calc(100svh-72px)] md:min-h-screen scroll-mt-20 flex items-center justify-center text-center px-4 sm:px-6 
+      bg-transparent text-blue-800
+      dark:text-blue-300 transition-colors duration-300"
     >
       <div data-reveal="zoom" className="max-w-3xl">
-        <h1 data-reveal="left" className="text-4xl md:text-6xl font-extrabold mb-4">
-          Hi, I’m Jade <span className="animate-pulse">👋</span>
+        <h1 data-reveal="left" className="text-4xl md:text-6xl font-extrabold mb-4 flex items-center justify-center gap-3">
+          Hi, I’m Jade
+          <span className="inline-block animate-pulse hover:animate-none cursor-pointer active:scale-75 active:rotate-12 transition-transform duration-200">
+            👋
+          </span>
         </h1>
 
         <p

@@ -7,6 +7,12 @@ body,
   min-height: 100%;
 }
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
 html {
   scroll-behavior: smooth;
   background-color: #ffffff;
@@ -20,7 +26,31 @@ html.dark {
 
 body {
   background-color: transparent;
-  transition: background-color 300ms ease, color 300ms ease;
+  transition: background-color 240ms ease, color 240ms ease;
+}
+
+main > section {
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  main > section {
+    overflow-x: hidden;
+  }
+}
+
+html.theme-switching,
+html.theme-switching body {
+  transition: background-color 340ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+  transition-duration: 340ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 [data-reveal] {
@@ -53,6 +83,14 @@ body {
   [data-reveal].is-visible {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  main > section[data-reveal],
+  main > footer[data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
   }
 }
 
@@ -118,6 +156,7 @@ body {
 
 .project-flick-surface {
   touch-action: pan-y;
+  overflow: hidden;
 }
 
 .section-flip-card {
@@ -188,4 +227,497 @@ body {
 
 .loader-pill-dot {
   animation: loaderDotPulse 1.2s ease-in-out infinite;
+}
+
+.section-motion-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.section-motion-backdrop__base {
+  position: absolute;
+  inset: -8%;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(56, 189, 248, 0.15), transparent 40%),
+    radial-gradient(circle at 82% 12%, rgba(248, 113, 113, 0.11), transparent 36%),
+    radial-gradient(circle at 50% 76%, rgba(99, 102, 241, 0.09), transparent 46%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.9));
+}
+
+.dark .section-motion-backdrop__base {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(96, 165, 250, 0.2), transparent 42%),
+    radial-gradient(circle at 78% 20%, rgba(248, 113, 113, 0.16), transparent 38%),
+    radial-gradient(circle at 52% 72%, rgba(129, 140, 248, 0.14), transparent 46%),
+    linear-gradient(165deg, rgba(20, 23, 44, 0.98), rgba(24, 26, 52, 0.95));
+}
+
+.motion-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 460ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity;
+}
+
+.motion-cloud {
+  position: absolute;
+  left: -38%;
+  top: var(--cloud-top);
+  width: var(--cloud-width);
+  height: clamp(2.8rem, 4.8vw, 5.5rem);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(125, 211, 252, 0.24), rgba(59, 130, 246, 0.06));
+  filter: blur(0.5px);
+  animation: cloudPass var(--cloud-duration) linear infinite;
+  animation-delay: var(--cloud-delay);
+  will-change: transform;
+}
+
+.dark .motion-cloud {
+  background: linear-gradient(90deg, rgba(125, 211, 252, 0.18), rgba(37, 99, 235, 0.06));
+}
+
+.motion-drop {
+  position: absolute;
+  left: var(--drop-left);
+  top: -16vh;
+  width: 2px;
+  height: var(--drop-height);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.7), rgba(56, 189, 248, 0.06));
+  opacity: 0.42;
+  animation: dropFall var(--drop-duration) linear infinite;
+  animation-delay: var(--drop-delay);
+  will-change: transform, opacity;
+}
+
+.dark .motion-drop {
+  background: linear-gradient(180deg, rgba(125, 211, 252, 0.7), rgba(125, 211, 252, 0.07));
+}
+
+.motion-ripple {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  width: clamp(15rem, 40vw, 38rem);
+  aspect-ratio: 1 / 0.21;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.26);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.1) inset;
+  opacity: 0.52;
+  transform: translate(-50%, 0) scale(1);
+  animation: ripplePulse 4.1s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.dark .motion-ripple {
+  border-color: rgba(147, 197, 253, 0.32);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.15) inset;
+}
+
+.motion-windmill {
+  position: absolute;
+  left: calc(50% - clamp(5rem, 11vw, 8rem));
+  top: 26%;
+  width: clamp(10rem, 22vw, 16rem);
+  aspect-ratio: 1;
+  animation: windmillDrift 7.4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.motion-windmill__hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-left: -0.45rem;
+  margin-top: -0.45rem;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.45);
+}
+
+.dark .motion-windmill__hub {
+  background: rgba(147, 197, 253, 0.55);
+}
+
+.motion-windmill__arm {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1px;
+  height: 42%;
+  margin-left: -0.5px;
+  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, rgba(37, 99, 235, 0.46), rgba(37, 99, 235, 0.06));
+  animation: windmillSpin 8.2s linear infinite;
+}
+
+.dark .motion-windmill__arm {
+  background: linear-gradient(180deg, rgba(147, 197, 253, 0.5), rgba(147, 197, 253, 0.08));
+}
+
+.motion-windmill__arm--a {
+  transform: translateY(-100%) rotate(0deg);
+}
+
+.motion-windmill__arm--b {
+  transform: translateY(-100%) rotate(90deg);
+}
+
+.motion-windmill__arm--c {
+  transform: translateY(-100%) rotate(180deg);
+}
+
+.motion-windmill__arm--d {
+  transform: translateY(-100%) rotate(270deg);
+}
+
+.motion-wave {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  height: clamp(5rem, 12vw, 9.5rem);
+  background-size: 16rem 100%;
+  background-repeat: repeat-x;
+  border-radius: 999px;
+}
+
+.motion-wave--one {
+  top: 18%;
+  opacity: 0.28;
+  animation: waveSlide 11s linear infinite;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.24) 0,
+    rgba(59, 130, 246, 0.24) 24px,
+    rgba(59, 130, 246, 0.02) 24px,
+    rgba(59, 130, 246, 0.02) 58px
+  );
+}
+
+.motion-wave--two {
+  top: 36%;
+  opacity: 0.2;
+  animation: waveSlideReverse 15s linear infinite;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(244, 114, 182, 0.2) 0,
+    rgba(244, 114, 182, 0.2) 20px,
+    rgba(244, 114, 182, 0.02) 20px,
+    rgba(244, 114, 182, 0.02) 52px
+  );
+}
+
+.motion-wave--three {
+  top: 58%;
+  opacity: 0.17;
+  animation: waveSlide 18s linear infinite;
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(14, 165, 233, 0.18) 0,
+    rgba(14, 165, 233, 0.18) 22px,
+    rgba(14, 165, 233, 0.02) 22px,
+    rgba(14, 165, 233, 0.02) 60px
+  );
+}
+
+.dark .motion-wave--one {
+  opacity: 0.3;
+}
+
+.dark .motion-wave--two {
+  opacity: 0.24;
+}
+
+.dark .motion-wave--three {
+  opacity: 0.2;
+}
+
+.motion-spring {
+  position: absolute;
+  left: 50%;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  animation: springFloat 5.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+.dark .motion-spring {
+  border-color: rgba(147, 197, 253, 0.32);
+}
+
+.motion-spring--1 {
+  width: clamp(12rem, 26vw, 23rem);
+  height: clamp(7rem, 13vw, 11rem);
+  top: 24%;
+  margin-left: calc(clamp(12rem, 26vw, 23rem) * -0.5);
+}
+
+.motion-spring--2 {
+  width: clamp(16rem, 34vw, 30rem);
+  height: clamp(9rem, 18vw, 15rem);
+  top: 34%;
+  margin-left: calc(clamp(16rem, 34vw, 30rem) * -0.5);
+  opacity: 0.85;
+  animation-delay: 0.65s;
+}
+
+.motion-spring--3 {
+  width: clamp(20rem, 42vw, 37rem);
+  height: clamp(12rem, 23vw, 18rem);
+  top: 44%;
+  margin-left: calc(clamp(20rem, 42vw, 37rem) * -0.5);
+  opacity: 0.7;
+  animation-delay: 1.2s;
+}
+
+.motion-gust {
+  position: absolute;
+  left: -42%;
+  top: var(--gust-top);
+  width: var(--gust-width);
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.42), transparent);
+  animation: gustSweep var(--gust-duration) linear infinite;
+  animation-delay: var(--gust-delay);
+  will-change: transform, opacity;
+}
+
+.dark .motion-gust {
+  background: linear-gradient(90deg, transparent, rgba(147, 197, 253, 0.54), transparent);
+}
+
+@keyframes cloudPass {
+  0% {
+    transform: translate3d(-8vw, -8px, 0);
+  }
+
+  100% {
+    transform: translate3d(156vw, 8px, 0);
+  }
+}
+
+@keyframes dropFall {
+  0% {
+    transform: translate3d(0, -18vh, 0);
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 0.46;
+  }
+
+  100% {
+    transform: translate3d(0, 120vh, 0);
+    opacity: 0;
+  }
+}
+
+@keyframes ripplePulse {
+  0%,
+  100% {
+    transform: translate(-50%, 0) scale(0.9);
+    opacity: 0.36;
+  }
+
+  50% {
+    transform: translate(-50%, 0) scale(1.18);
+    opacity: 0.58;
+  }
+}
+
+@keyframes windmillSpin {
+  0% {
+    rotate: 0deg;
+  }
+
+  100% {
+    rotate: 360deg;
+  }
+}
+
+@keyframes windmillDrift {
+  0% {
+    transform: translate3d(-10vw, -8px, 0);
+  }
+
+  100% {
+    transform: translate3d(10vw, 10px, 0);
+  }
+}
+
+@keyframes waveSlide {
+  0% {
+    background-position-x: 0;
+  }
+
+  100% {
+    background-position-x: 16rem;
+  }
+}
+
+@keyframes waveSlideReverse {
+  0% {
+    background-position-x: 16rem;
+  }
+
+  100% {
+    background-position-x: 0;
+  }
+}
+
+@keyframes springFloat {
+  0%,
+  100% {
+    transform: translate3d(0, -6px, 0) scale(0.97);
+  }
+
+  50% {
+    transform: translate3d(0, 10px, 0) scale(1.03);
+  }
+}
+
+@keyframes gustSweep {
+  0% {
+    transform: translate3d(-6vw, -8px, 0) scaleX(0.8);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.75;
+  }
+
+  100% {
+    transform: translate3d(156vw, 8px, 0) scaleX(1.05);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .section-motion-backdrop__base {
+    inset: -14%;
+  }
+
+  .motion-cloud {
+    height: clamp(2.3rem, 6vw, 4rem);
+  }
+
+  .motion-windmill {
+    top: 31%;
+  }
+}
+
+/* --- New Global Animations --- */
+
+.motion-twinkle {
+  background-image: 
+    radial-gradient(1.5px 1.5px at 15% 25%, rgba(56, 189, 248, 0.4) 100%, transparent),
+    radial-gradient(2px 2px at 85% 15%, rgba(56, 189, 248, 0.5) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 45% 75%, rgba(56, 189, 248, 0.3) 100%, transparent),
+    radial-gradient(2.5px 2.5px at 75% 85%, rgba(56, 189, 248, 0.6) 100%, transparent);
+  animation: twinklePulse 4s ease-in-out infinite alternate;
+  mix-blend-mode: screen;
+}
+.dark .motion-twinkle {
+  background-image: 
+    radial-gradient(1.5px 1.5px at 15% 25%, #93c5fd 100%, transparent),
+    radial-gradient(2px 2px at 85% 15%, #93c5fd 100%, transparent),
+    radial-gradient(1.5px 1.5px at 45% 75%, #93c5fd 100%, transparent),
+    radial-gradient(2.5px 2.5px at 75% 85%, #bfdbfe 100%, transparent);
+}
+
+.motion-orbs {
+  filter: blur(45px);
+}
+.motion-orb {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.15;
+  animation: orbFloat 10s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.motion-orb-1 {
+  width: 30vw; height: 30vw;
+  top: 10%; left: 10%;
+  background: rgba(56, 189, 248, 0.4);
+  animation-delay: 0s;
+}
+.motion-orb-2 {
+  width: 40vw; height: 40vw;
+  bottom: 20%; right: 10%;
+  background: rgba(99, 102, 241, 0.3);
+  animation-delay: -3s;
+}
+.motion-orb-3 {
+  width: 25vw; height: 25vw;
+  top: 50%; left: 60%;
+  background: rgba(248, 113, 113, 0.2);
+  animation-delay: -5s;
+}
+
+.motion-wind-line {
+  position: absolute;
+  height: 1px;
+  width: 15vw;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.3), transparent);
+  left: -20vw;
+  animation: windSpeed 5.2s linear infinite;
+  will-change: transform, opacity;
+}
+.dark .motion-wind-line {
+  background: linear-gradient(90deg, transparent, rgba(147, 197, 253, 0.4), transparent);
+}
+
+.motion-kirin {
+  background: radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.25), transparent 50%);
+  opacity: 0;
+  animation: kirinFlash 14s ease-out infinite;
+  will-change: opacity;
+  pointer-events: none;
+}
+.dark .motion-kirin {
+  background: radial-gradient(circle at 50% -10%, rgba(147, 197, 253, 0.25), transparent 50%);
+}
+
+@keyframes twinklePulse {
+  0% { opacity: 0.4; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1.02); }
+}
+@keyframes orbFloat {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(4vw, -6vh) scale(1.15); }
+}
+@keyframes windSpeed {
+  0% { transform: translateX(0); opacity: 0; }
+  15% { opacity: 0.8; }
+  85% { opacity: 0.8; }
+  100% { transform: translateX(140vw); opacity: 0; }
+}
+@keyframes kirinFlash {
+  0%, 94%, 98%, 100% { opacity: 0; }
+  95%, 97% { opacity: 0.75; }
+  96% { opacity: 0.1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-scene {
+    transition: none;
+  }
+
+  .motion-cloud,
+  .motion-drop,
+  .motion-ripple,
+  .motion-windmill,
+  .motion-wave,
+  .motion-spring,
+  .motion-gust {
+    transform: none !important;
+  }
 }

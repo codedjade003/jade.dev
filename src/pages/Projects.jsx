@@ -1,4 +1,12 @@
 import { useEffect, useRef, useState } from "react";
+import { triggerInteractionFeedback } from "../utils/interactionFeedback";
+
+const getYouTubeThumbnailSources = (youtubeId) => [
+  `https://i.ytimg.com/vi/${youtubeId}/maxresdefault.jpg`,
+  `https://i.ytimg.com/vi/${youtubeId}/sddefault.jpg`,
+  `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`,
+  `https://i.ytimg.com/vi/${youtubeId}/mqdefault.jpg`,
+];
 
 export default function Projects() {
   const projectSectionConfig = getProjectSectionConfig();
@@ -6,25 +14,37 @@ export default function Projects() {
   const [sectionDirection, setSectionDirection] = useState(1);
   const [cardFlipDirection, setCardFlipDirection] = useState(-1);
   const [pauseAutoSlide, setPauseAutoSlide] = useState(false);
-  const [cardDragStartX, setCardDragStartX] = useState(null);
+  const [sectionDragOffset, setSectionDragOffset] = useState(0);
+  const [isSectionDragging, setIsSectionDragging] = useState(false);
+  const [projectDragOffset, setProjectDragOffset] = useState(0);
+  const [isProjectDragging, setIsProjectDragging] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileFlippedSectionKey, setMobileFlippedSectionKey] = useState(null);
   const [projectIndices, setProjectIndices] = useState(() =>
     Object.fromEntries(projectSectionConfig.map((section) => [section.key, 0]))
   );
+  const projectDragRef = useRef({ active: false, dragging: false, startX: 0, startY: 0 });
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
   const activeSection = projectSectionConfig[activeSectionIndex];
   const activeProjectCount = activeSection.projects.length;
   const activeProjectIndex = projectIndices[activeSection.key] ?? 0;
   const activeProject = activeSection.projects[activeProjectIndex];
 
-  const moveSection = (direction) => {
+  const moveSection = (direction, { feedback = "swipe" } = {}) => {
     setSectionDirection(direction);
     setMobileFlippedSectionKey(null);
+    setSectionDragOffset(0);
+    setIsSectionDragging(false);
     setActiveSectionIndex((current) => {
       const totalSections = projectSectionConfig.length;
       return (current + direction + totalSections) % totalSections;
     });
+
+    if (feedback) {
+      triggerInteractionFeedback(feedback);
+    }
   };
 
   const jumpToSection = (index) => {
@@ -32,6 +52,7 @@ export default function Projects() {
     setSectionDirection(index > activeSectionIndex ? 1 : -1);
     setMobileFlippedSectionKey(null);
     setActiveSectionIndex(index);
+    triggerInteractionFeedback("tap");
   };
 
   useEffect(() => {
@@ -44,53 +65,118 @@ export default function Projects() {
     return () => window.removeEventListener("resize", syncViewport);
   }, []);
 
-  const moveProject = (direction) => {
+  const moveProject = (direction, { feedback = "swipe" } = {}) => {
     if (activeProjectCount < 2) return;
 
     setCardFlipDirection(direction > 0 ? -1 : 1);
+    setProjectDragOffset(0);
+    setIsProjectDragging(false);
     setProjectIndices((current) => {
       const next = { ...current };
       const currentIndex = next[activeSection.key] ?? 0;
       next[activeSection.key] = (currentIndex + direction + activeProjectCount) % activeProjectCount;
       return next;
     });
+
+    if (feedback) {
+      triggerInteractionFeedback(feedback);
+    }
   };
 
   useEffect(() => {
     if (activeProjectCount < 2 || pauseAutoSlide) return undefined;
 
     const timer = setInterval(() => {
-      setCardFlipDirection(-1);
-      setProjectIndices((current) => {
-        const next = { ...current };
-        const currentIndex = next[activeSection.key] ?? 0;
-        next[activeSection.key] = (currentIndex + 1) % activeProjectCount;
-        return next;
-      });
+      moveProject(1, { feedback: null });
     }, 7200);
 
     return () => clearInterval(timer);
   }, [activeProjectCount, activeSection.key, pauseAutoSlide]);
 
-  const handleCardPointerUp = (event) => {
-    if (cardDragStartX === null) return;
+  const handleSectionDragStart = () => {
+    setIsSectionDragging(true);
+  };
 
-    const delta = event.clientX - cardDragStartX;
-    if (Math.abs(delta) > 45) {
-      if (delta < 0) {
-        moveProject(1);
-      } else {
-        moveProject(-1);
-      }
+  const handleSectionDragMove = (deltaX) => {
+    setSectionDragOffset(clamp(deltaX, -190, 190));
+  };
+
+  const handleSectionDragEnd = (deltaX, wasDragging) => {
+    setIsSectionDragging(false);
+    setSectionDragOffset(0);
+
+    if (!wasDragging) return false;
+
+    if (Math.abs(deltaX) > 62) {
+      moveSection(deltaX < 0 ? 1 : -1, { feedback: "swipe" });
+      return true;
     }
-    setCardDragStartX(null);
+
+    return true;
+  };
+
+  const isInteractiveTarget = (target) => {
+    if (!(target instanceof Element)) return false;
+    return Boolean(target.closest("a, button, iframe, input, textarea, select"));
+  };
+
+  const resetProjectDrag = () => {
+    projectDragRef.current = { active: false, dragging: false, startX: 0, startY: 0 };
+    setProjectDragOffset(0);
+    setIsProjectDragging(false);
+  };
+
+  const handleProjectPointerDown = (event) => {
+    if (isInteractiveTarget(event.target)) return;
+
+    projectDragRef.current = {
+      active: true,
+      dragging: false,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+  };
+
+  const handleProjectPointerMove = (event) => {
+    const state = projectDragRef.current;
+    if (!state.active) return;
+
+    const deltaX = event.clientX - state.startX;
+    const deltaY = event.clientY - state.startY;
+
+    if (!state.dragging) {
+      if (Math.abs(deltaX) < 8) return;
+      if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+      state.dragging = true;
+      setIsProjectDragging(true);
+    }
+
+    setProjectDragOffset(clamp(deltaX, -180, 180));
+  };
+
+  const handleProjectPointerEnd = (event) => {
+    const state = projectDragRef.current;
+    if (!state.active) return;
+
+    const deltaX = event.clientX - state.startX;
+    const wasDragging = state.dragging;
+    resetProjectDrag();
+
+    if (!wasDragging) return;
+
+    if (Math.abs(deltaX) > 65) {
+      moveProject(deltaX < 0 ? 1 : -1, { feedback: "swipe" });
+    }
   };
 
   return (
     <section
       id="projects"
-      data-reveal="up"
-      className="scroll-mt-20 py-12 bg-slate-50/70 text-blue-800 dark:bg-[#21213a]/35 dark:text-blue-300 transition-colors duration-300"
+      className="scroll-mt-20 py-12 bg-transparent text-blue-800 dark:text-blue-300 transition-colors duration-300"
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 sm:space-y-7">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -118,7 +204,7 @@ export default function Projects() {
 
             <div className="hidden md:flex items-center gap-2">
               <button
-                onClick={() => moveSection(-1)}
+                onClick={() => moveSection(-1, { feedback: "tap" })}
                 type="button"
                 aria-label="Previous project category"
                 className="h-8 w-8 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors"
@@ -126,7 +212,7 @@ export default function Projects() {
                 {"<"}
               </button>
               <button
-                onClick={() => moveSection(1)}
+                onClick={() => moveSection(1, { feedback: "tap" })}
                 type="button"
                 aria-label="Next project category"
                 className="h-8 w-8 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
@@ -160,11 +246,16 @@ export default function Projects() {
                   previewProject={previewProject}
                   isCenter={isCenter}
                   offset={offset}
+                  sectionDragOffset={sectionDragOffset}
+                  isSectionDragging={isSectionDragging}
                   isMobile={isMobile}
                   isMobileFlipped={mobileFlippedSectionKey === section.key}
-                  onSwipe={moveSection}
+                  onDragStart={handleSectionDragStart}
+                  onDragMove={handleSectionDragMove}
+                  onDragEnd={handleSectionDragEnd}
                   onTapFlip={() => {
                     if (!isMobile) return;
+                    triggerInteractionFeedback("tap");
                     setMobileFlippedSectionKey((current) =>
                       current === section.key ? null : section.key
                     );
@@ -179,7 +270,7 @@ export default function Projects() {
           </div>
 
           <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 md:hidden">
-            Tap a card to flip. Swipe left or right to rotate.
+            Tap to flip. Drag to swipe with momentum.
           </p>
 
           <div className="mt-2 flex justify-center gap-2">
@@ -211,7 +302,7 @@ export default function Projects() {
 
               <div className="hidden md:flex items-center gap-2">
                 <button
-                  onClick={() => moveProject(-1)}
+                  onClick={() => moveProject(-1, { feedback: "tap" })}
                   type="button"
                   aria-label={`Previous ${activeSection.title} project`}
                   className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors"
@@ -219,7 +310,7 @@ export default function Projects() {
                   Prev
                 </button>
                 <button
-                  onClick={() => moveProject(1)}
+                  onClick={() => moveProject(1, { feedback: "tap" })}
                   type="button"
                   aria-label={`Next ${activeSection.title} project`}
                   className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
@@ -234,34 +325,51 @@ export default function Projects() {
               onMouseEnter={() => setPauseAutoSlide(true)}
               onMouseLeave={() => {
                 setPauseAutoSlide(false);
-                setCardDragStartX(null);
+                resetProjectDrag();
               }}
             >
               <div
                 tabIndex={0}
                 role="region"
                 aria-label={`${activeSection.title} project carousel`}
-                onPointerDown={(event) => setCardDragStartX(event.clientX)}
-                onPointerUp={handleCardPointerUp}
-                onPointerCancel={() => setCardDragStartX(null)}
-                onPointerLeave={() => setCardDragStartX(null)}
+                onPointerDown={handleProjectPointerDown}
+                onPointerMove={handleProjectPointerMove}
+                onPointerUp={handleProjectPointerEnd}
+                onPointerCancel={resetProjectDrag}
+                onPointerLeave={(event) => {
+                  if (projectDragRef.current.active && projectDragRef.current.dragging) {
+                    handleProjectPointerEnd(event);
+                    return;
+                  }
+
+                  if (projectDragRef.current.active) {
+                    resetProjectDrag();
+                  }
+                }}
                 onKeyDown={(event) => {
-                  if (event.key === "ArrowRight") moveProject(1);
-                  if (event.key === "ArrowLeft") moveProject(-1);
+                  if (event.key === "ArrowRight") moveProject(1, { feedback: "tap" });
+                  if (event.key === "ArrowLeft") moveProject(-1, { feedback: "tap" });
                 }}
                 className="outline-none"
               >
                 <div
-                  key={`${activeSection.key}-${activeProject.title}-${activeProjectIndex}`}
-                  style={{ "--flip-angle": `${cardFlipDirection < 0 ? -18 : 18}deg` }}
-                  className="flip-enter"
+                  className={`transition-transform ${isProjectDragging ? "duration-75" : "duration-300"}`}
+                  style={{
+                    transform: `translate3d(${projectDragOffset}px, 0, 0) rotate(${projectDragOffset * 0.025}deg)`,
+                  }}
                 >
-                  <ProjectCard
-                    project={activeProject}
-                    type={activeSection.type}
-                    originIndex={activeProjectIndex}
-                    totalProjects={activeProjectCount}
-                  />
+                  <div
+                    key={`${activeSection.key}-${activeProject.title}-${activeProjectIndex}`}
+                    style={{ "--flip-angle": `${cardFlipDirection < 0 ? -18 : 18}deg` }}
+                    className="flip-enter"
+                  >
+                    <ProjectCard
+                      project={activeProject}
+                      type={activeSection.type}
+                      originIndex={activeProjectIndex}
+                      totalProjects={activeProjectCount}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -312,20 +420,67 @@ function SectionFlipCategoryCard({
   previewProject,
   isCenter,
   offset,
+  sectionDragOffset,
+  isSectionDragging,
   isMobile,
   isMobileFlipped,
-  onSwipe,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
   onTapFlip,
   onSelect,
 }) {
-  const previewImage = previewProject?.youtubeId
-    ? `https://img.youtube.com/vi/${previewProject.youtubeId}/hqdefault.jpg`
-    : null;
+  const thumbnailSources = previewProject?.youtubeId
+    ? getYouTubeThumbnailSources(previewProject.youtubeId)
+    : [];
+  const [thumbnailIndex, setThumbnailIndex] = useState(0);
   const pointerStartRef = useRef(null);
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  useEffect(() => {
+    setThumbnailIndex(0);
+  }, [previewProject?.youtubeId]);
+
+  const previewImage = thumbnailSources.length ? thumbnailSources[thumbnailIndex] : null;
+  const dragProgress = clamp(sectionDragOffset / 190, -1, 1);
+  const virtualOffset = offset + dragProgress;
+  const absOffset = Math.abs(virtualOffset);
+  const scale = clamp(1.1 - absOffset * 0.34, 0.66, 1.11);
+  const opacity = clamp(1 - absOffset * 0.35, 0.2, 1);
+  const saturation = clamp(1 - absOffset * 0.24, 0.56, 1);
+  const cardDistance = "clamp(9.5rem, 31vw, 22rem)";
 
   const handlePointerDown = (event) => {
     if (!isMobile || event.pointerType !== "touch") return;
-    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+
+    pointerStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      dragging: false,
+    };
+
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+  };
+
+  const handlePointerMove = (event) => {
+    if (!isMobile || event.pointerType !== "touch" || !pointerStartRef.current) return;
+
+    const deltaX = event.clientX - pointerStartRef.current.x;
+    const deltaY = event.clientY - pointerStartRef.current.y;
+
+    if (!pointerStartRef.current.dragging) {
+      if (Math.abs(deltaX) < 8) return;
+      if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+      pointerStartRef.current.dragging = true;
+      onDragStart();
+    }
+
+    if (pointerStartRef.current.dragging) {
+      onDragMove(deltaX);
+    }
   };
 
   const handlePointerUp = (event) => {
@@ -333,15 +488,18 @@ function SectionFlipCategoryCard({
 
     const deltaX = event.clientX - pointerStartRef.current.x;
     const deltaY = event.clientY - pointerStartRef.current.y;
+    const wasDragging = pointerStartRef.current.dragging;
     pointerStartRef.current = null;
 
-    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
-      onSwipe(deltaX < 0 ? 1 : -1);
+    const dragConsumed = onDragEnd(deltaX, wasDragging);
+    if (dragConsumed) {
       return;
     }
 
     if (Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12) {
-      onTapFlip();
+      if (isCenter) {
+        onTapFlip();
+      }
     }
   };
 
@@ -350,23 +508,30 @@ function SectionFlipCategoryCard({
       type="button"
       onClick={() => {
         if (isMobile) return;
+        triggerInteractionFeedback("tap");
         onSelect();
       }}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={() => {
         pointerStartRef.current = null;
+        onDragEnd(0, false);
       }}
       onPointerLeave={() => {
         pointerStartRef.current = null;
+        onDragEnd(0, false);
       }}
       aria-current={isCenter ? "true" : undefined}
       className="group absolute left-1/2 top-1/2 w-[clamp(12rem,45vw,21rem)] h-[10.5rem] sm:h-[12rem] text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
       style={{
-        transform: `translate(-50%, -50%) translateX(calc(${offset} * clamp(9.5rem, 31vw, 22rem))) scale(${isCenter ? 1.08 : 0.77})`,
-        zIndex: isCenter ? 30 : 20,
-        opacity: isCenter ? 1 : 0.58,
-        filter: isCenter ? "none" : "saturate(0.72)",
+        transform: `translate(-50%, -50%) translateX(calc(${virtualOffset} * ${cardDistance})) scale(${scale})`,
+        zIndex: 40 - Math.round(absOffset * 12),
+        opacity,
+        filter: `saturate(${saturation})`,
+        transition: isSectionDragging
+          ? "transform 0ms linear, opacity 220ms ease, filter 220ms ease"
+          : undefined,
       }}
     >
       <div className={`section-flip-card h-full w-full ${isMobileFlipped ? "is-flipped" : ""}`}>
@@ -384,6 +549,12 @@ function SectionFlipCategoryCard({
                   src={previewImage}
                   alt={`${section.title} preview`}
                   loading="lazy"
+                  onError={() => {
+                    setThumbnailIndex((current) =>
+                      Math.min(current + 1, Math.max(thumbnailSources.length - 1, 0))
+                    );
+                  }}
+                  referrerPolicy="strict-origin-when-cross-origin"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
               ) : (
@@ -421,7 +592,7 @@ function SectionFlipCategoryCard({
 
 function ProjectCard({ project, type, originIndex, totalProjects }) {
   return (
-    <div className="project-stack h-full">
+    <div className="project-stack h-full lg:max-w-[72rem] xl:max-w-[68rem] mx-auto">
       <article className="h-full bg-slate-100 dark:bg-slate-800/95 p-4 rounded-2xl border border-blue-100 dark:border-slate-700 shadow text-sm flex flex-col">
         <HoverVideoPreview project={project} />
 
@@ -444,6 +615,12 @@ function ProjectCard({ project, type, originIndex, totalProjects }) {
 
 function HoverVideoPreview({ project }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const thumbnailSources = project.youtubeId ? getYouTubeThumbnailSources(project.youtubeId) : [];
+  const [thumbnailIndex, setThumbnailIndex] = useState(0);
+
+  useEffect(() => {
+    setThumbnailIndex(0);
+  }, [project.youtubeId]);
 
   if (!project.youtubeId) {
     return (
@@ -457,15 +634,21 @@ function HoverVideoPreview({ project }) {
 
   return (
     <div
-      className="relative aspect-video rounded-xl overflow-hidden mb-4 group"
+      className="relative aspect-video lg:aspect-[16/7.4] 2xl:aspect-[16/7] rounded-xl overflow-hidden mb-4 group"
       onMouseEnter={() => setIsPlaying(true)}
       onMouseLeave={() => setIsPlaying(false)}
       onClick={() => setIsPlaying((playing) => !playing)}
     >
       <img
-        src={`https://img.youtube.com/vi/${project.youtubeId}/hqdefault.jpg`}
+        src={thumbnailSources[thumbnailIndex]}
         alt={`${project.title} preview`}
         loading="lazy"
+        onError={() => {
+          setThumbnailIndex((current) =>
+            Math.min(current + 1, Math.max(thumbnailSources.length - 1, 0))
+          );
+        }}
+        referrerPolicy="strict-origin-when-cross-origin"
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
           isPlaying ? "opacity-0" : "opacity-100"
         }`}

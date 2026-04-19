@@ -11,8 +11,7 @@ export default function Footer() {
   return (
     <footer
       id="contact"
-      data-reveal="up"
-      className="bg-white text-blue-800 dark:bg-[#1b1b2f] dark:text-blue-300 px-6 py-16 transition-colors duration-300"
+      className="bg-transparent text-blue-800 dark:text-blue-300 px-6 py-16 transition-colors duration-300"
     >
       <div className="max-w-6xl mx-auto grid gap-12 md:grid-cols-2 items-start">
         {/* Contact Info */}

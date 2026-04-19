@@ -37,10 +37,9 @@ export default function About() {
   return (
     <section
       id="about"
-      data-reveal="up"
       className="min-h-screen px-6 py-16 flex flex-col justify-center items-center text-center 
-      bg-white text-blue-800 
-      dark:bg-[#1b1b2f] dark:text-blue-300 transition-colors duration-300"
+      bg-transparent text-blue-800
+      dark:text-blue-300 transition-colors duration-300"
     >
       <img
         data-reveal="zoom"

@@ -11,6 +11,7 @@ import Music from './pages/Music';
 import Loader from './components/Loader';
 import ScrollToggle from './components/ScrollToggle';
 import NotFound from './pages/NotFound';
+import MotionBackdrop from './components/MotionBackdrop';
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,9 @@ function App() {
   useEffect(() => {
     if (loading) return undefined;
 
-    const revealElements = Array.from(document.querySelectorAll('[data-reveal]'));
+    const revealElements = Array.from(document.querySelectorAll('[data-reveal]')).filter(
+      (el) => !el.matches('main > section, main > footer')
+    );
     if (!revealElements.length) return undefined;
 
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -38,22 +41,22 @@ function App() {
     }
 
     const observer = new IntersectionObserver(
-      (entries, instance) => {
+      (entries) => {
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
           entry.target.classList.add('is-visible');
-          instance.unobserve(entry.target);
         });
       },
       {
-        threshold: 0.15,
-        rootMargin: '0px 0px -64px 0px',
+        threshold: 0.05,
+        rootMargin: '0px 0px 50px 0px',
       }
     );
 
     revealElements.forEach((el, index) => {
+      // Only set delay for the first few items to prevent long initial loads
       if (!el.style.getPropertyValue('--reveal-delay')) {
-        el.style.setProperty('--reveal-delay', `${Math.min(index, 7) * 60}ms`);
+        el.style.setProperty('--reveal-delay', `${Math.min(index, 3) * 60}ms`);
       }
       observer.observe(el);
     });
@@ -64,28 +67,32 @@ function App() {
   if (loading) return <Loader />;
 
   return (
-    <div className="text-base leading-relaxed font-sans bg-white dark:bg-[#1b1b2f] text-blue-900 dark:text-blue-200">
-      <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+    <div className="relative text-base leading-relaxed font-sans bg-transparent text-blue-900 dark:text-blue-200">
+      <MotionBackdrop />
 
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              <main>
-                <Home />
-                <Projects />
-                <Experience />
-                <Music />
-                <About />
-                <Contact />
-                <ScrollToggle />
-              </main>
-            </>
-          }
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <div className="relative z-10">
+        <Navbar darkMode={darkMode} setDarkMode={setDarkMode} />
+
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <main>
+                  <Home />
+                  <Projects />
+                  <Experience />
+                  <Music />
+                  <About />
+                  <Contact />
+                  <ScrollToggle />
+                </main>
+              </>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
     </div>
   );
 }
