@@ -43,7 +43,6 @@ body {
 @media (pointer: coarse) {
   html, body, #root {
     overflow-x: hidden;
-    -webkit-overflow-scrolling: touch;
   }
 
   /* Ensure media elements don't overflow the viewport on mobile */
@@ -65,6 +64,14 @@ body {
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     box-sizing: border-box;
+  }
+
+  /* Apply momentum-style scrolling only to elements that actually scroll (iOS Safari).
+     Removing the global usage avoids DevTools warnings and no-ops on non-scrollable roots. */
+  .mobile-menu-overlay,
+  .overflow-y-auto,
+  .overflow-auto {
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -234,6 +241,14 @@ html.theme-switching *::after {
 
 .section-flip-card.is-flipped .section-flip-card-inner {
   transform: rotateY(180deg);
+}
+
+/* When a component requests the front face to be forced (e.g. desktop click),
+   prevent hover-driven flips so users can interact and drag the card reliably. */
+.section-flip-card.force-front .section-flip-card-inner,
+.section-flip-card.force-front:hover .section-flip-card-inner,
+.section-flip-card.force-front:focus-within .section-flip-card-inner {
+  transform: rotateY(0deg) !important;
 }
 
 @media (hover: hover) and (pointer: fine) {

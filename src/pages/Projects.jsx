@@ -83,6 +83,20 @@ export default function Projects() {
     }
   };
 
+  // Animate a quick drag-like motion when user clicks the Prev/Next buttons on desktop
+  const animateMoveProject = (direction) => {
+    if (isProjectDragging) return;
+    const animOffset = direction > 0 ? 140 : -140;
+    setProjectDragOffset(animOffset);
+    setIsProjectDragging(true);
+
+    window.setTimeout(() => {
+      moveProject(direction, { feedback: "tap" });
+      setIsProjectDragging(false);
+      setProjectDragOffset(0);
+    }, 220);
+  };
+
   useEffect(() => {
     if (activeProjectCount < 2 || pauseAutoSlide) return undefined;
 
@@ -351,18 +365,18 @@ export default function Projects() {
 
               <div className="hidden md:flex items-center gap-2">
                 <button
-                  onClick={() => moveProject(-1, { feedback: "tap" })}
+                  onClick={() => animateMoveProject(-1)}
                   type="button"
                   aria-label={`Previous ${activeSection.title} project`}
-                  className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors"
+                  className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors active:scale-95"
                 >
                   Prev
                 </button>
                 <button
-                  onClick={() => moveProject(1, { feedback: "tap" })}
+                  onClick={() => animateMoveProject(1)}
                   type="button"
                   aria-label={`Next ${activeSection.title} project`}
-                  className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
+                  className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors active:scale-95"
                 >
                   Next
                 </button>
@@ -487,6 +501,8 @@ function SectionFlipCategoryCard({
     ? getYouTubeThumbnailSources(previewProject.youtubeId)
     : [];
   const [thumbnailIndex, setThumbnailIndex] = useState(0);
+  const [isDesktopFlipped, setIsDesktopFlipped] = useState(false);
+  const [forceFront, setForceFront] = useState(false);
   const pointerStartRef = useRef(null);
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
@@ -504,7 +520,8 @@ function SectionFlipCategoryCard({
   const cardDistance = "clamp(9.5rem, 31vw, 22rem)";
 
   const handlePointerDown = (event) => {
-    if (!isMobile || event.pointerType !== "touch") return;
+    // Allow pointer drags on desktop (mouse) and touch. Ignore non-primary buttons.
+    if (event.button && event.button !== 0) return;
 
     pointerStartRef.current = {
       x: event.clientX,
@@ -513,9 +530,12 @@ function SectionFlipCategoryCard({
     };
 
     if (typeof event.currentTarget.setPointerCapture === "function") {
-      event.currentTarget.setPointerCapture(event.pointerId);
+      try {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      } catch (e) {}
     }
-    // Always trigger feedback on touch start
+
+    // Trigger light feedback on pointer down (mouse or touch)
     import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
   };
 
@@ -582,7 +602,7 @@ function SectionFlipCategoryCard({
   };
 
   const handlePointerMove = (event) => {
-    if (!isMobile || event.pointerType !== "touch" || !pointerStartRef.current) return;
+    if (!pointerStartRef.current) return;
 
     const deltaX = event.clientX - pointerStartRef.current.x;
     const deltaY = event.clientY - pointerStartRef.current.y;
@@ -593,7 +613,6 @@ function SectionFlipCategoryCard({
 
       pointerStartRef.current.dragging = true;
       onDragStart();
-      // Feedback for swipe start
       import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
     }
 
@@ -603,7 +622,7 @@ function SectionFlipCategoryCard({
   };
 
   const handlePointerUp = (event) => {
-    if (!isMobile || event.pointerType !== "touch" || !pointerStartRef.current) return;
+    if (!pointerStartRef.current) return;
 
     const deltaX = event.clientX - pointerStartRef.current.x;
     const deltaY = event.clientY - pointerStartRef.current.y;
@@ -612,7 +631,6 @@ function SectionFlipCategoryCard({
 
     const dragConsumed = onDragEnd(deltaX, wasDragging);
     if (dragConsumed) {
-      // Feedback for swipe end
       import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
       return;
     }
@@ -628,7 +646,20 @@ function SectionFlipCategoryCard({
     <button
       type="button"
       onClick={() => {
-        if (isMobile) return;
+        // Desktop: clicking the center card toggles a forced front state so users can
+        // intentionally return the card to its front face and then interact/drag.
+        if (isCenter) {
+          if (isMobile) {
+            onTapFlip();
+          } else {
+            setForceFront((s) => !s);
+            setIsDesktopFlipped(false);
+            triggerInteractionFeedback("tap");
+          }
+          return;
+        }
+
+        // Non-center: select the card to move the carousel
         triggerInteractionFeedback("tap");
         onSelect();
       }}
@@ -642,6 +673,8 @@ function SectionFlipCategoryCard({
       onPointerLeave={() => {
         pointerStartRef.current = null;
         onDragEnd(0, false);
+        // Reset any forced front state when pointer leaves
+        setForceFront(false);
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -662,7 +695,9 @@ function SectionFlipCategoryCard({
           : undefined,
       }}
     >
-      <div className={`section-flip-card h-full w-full ${isMobileFlipped ? "is-flipped" : ""}`}>
+      <div
+        className={`section-flip-card h-full w-full ${(isMobile ? isMobileFlipped : isDesktopFlipped) ? "is-flipped" : ""} ${forceFront ? "force-front" : ""}`}
+      >
         <div className="section-flip-card-inner">
           <div
             className={`section-flip-face border ${

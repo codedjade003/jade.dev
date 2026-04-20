@@ -14,6 +14,15 @@ import NotFound from './pages/NotFound';
 import MotionBackdrop from './components/MotionBackdrop';
 import { unlockAudioContext } from './utils/interactionFeedback';
 
+// Safe localStorage read that won't throw on iOS private mode or old Safari
+function safeLocalStorage(key) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+}
+
 function App() {
   const [loading, setLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
@@ -23,19 +32,55 @@ function App() {
   }, [darkMode]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 7000);
+    let forceLoader = false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      forceLoader =
+        params.get('forceLoader') === '1' || safeLocalStorage('forceLoader') === '1';
+    } catch (e) {
+      // If URL parsing fails for any reason, proceed normally
+    }
+
+    if (forceLoader) {
+      console.log('Debug: forceLoader enabled; keeping loader visible until param removed');
+      return undefined;
+    }
+
+    // 4s is plenty — 7s looked broken on slow connections and froze on iOS background tabs
+    const timer = setTimeout(() => setLoading(false), 4000);
     return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    try {
+      console.log('App startup info', {
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        // Fixed: 'pointer: coarse' needs a space — older iOS Safari is strict about this
+        pointerCoarse: window.matchMedia('(pointer: coarse)').matches,
+        ua: navigator.userAgent,
+        displayModeStandalone: window.matchMedia('(display-mode: standalone)').matches,
+        standaloneFlag: window.navigator.standalone,
+      });
+    } catch (e) {
+      // ignore in odd environments
+    }
   }, []);
 
   useEffect(() => {
     if (loading) return undefined;
 
-    const revealElements = Array.from(document.querySelectorAll('[data-reveal]')).filter(
-      (el) => !el.matches('main > section, main > footer')
-    );
+    const revealElements = Array.from(
+      document.querySelectorAll('[data-reveal]')
+    ).filter((el) => !el.matches('main > section, main > footer'));
+
     if (!revealElements.length) return undefined;
 
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let prefersReducedMotion = false;
+    try {
+      prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {}
+
     if (prefersReducedMotion) {
       revealElements.forEach((el) => el.classList.add('is-visible'));
       return undefined;
@@ -55,7 +100,6 @@ function App() {
     );
 
     revealElements.forEach((el, index) => {
-      // Only set delay for the first few items to prevent long initial loads
       if (!el.style.getPropertyValue('--reveal-delay')) {
         el.style.setProperty('--reveal-delay', `${Math.min(index, 3) * 60}ms`);
       }
@@ -65,22 +109,26 @@ function App() {
     return () => observer.disconnect();
   }, [loading]);
 
-  // Unlock audio context on first user gesture so audio fallbacks can work on mobile browsers
   useEffect(() => {
-    const unlock = () => {
-      try {
-        unlockAudioContext();
-      } catch (e) {}
-      document.removeEventListener('touchstart', unlock);
-      document.removeEventListener('mousedown', unlock);
-    };
+    // iOS requires AudioContext to be created/resumed synchronously inside
+    // the gesture handler itself — not in a wrapper or setTimeout.
+    // Using a raw DOM listener here (not a React synthetic event) keeps it
+    // as close to the gesture as possible.
+    function handleFirstGesture() {
+      unlockAudioContext();
+    }
 
-    document.addEventListener('touchstart', unlock, { passive: true, once: true });
-    document.addEventListener('mousedown', unlock, { passive: true, once: true });
+    document.addEventListener('touchstart', handleFirstGesture, {
+      passive: true,
+      once: true,
+    });
+    document.addEventListener('mousedown', handleFirstGesture, {
+      once: true,
+    });
 
     return () => {
-      document.removeEventListener('touchstart', unlock);
-      document.removeEventListener('mousedown', unlock);
+      document.removeEventListener('touchstart', handleFirstGesture);
+      document.removeEventListener('mousedown', handleFirstGesture);
     };
   }, []);
 
@@ -97,17 +145,15 @@ function App() {
           <Route
             path="/"
             element={
-              <>
-                <main>
-                  <Home />
-                  <Projects />
-                  <Experience />
-                  <Music />
-                  <About />
-                  <Contact />
-                  <ScrollToggle />
-                </main>
-              </>
+              <main>
+                <Home />
+                <Projects />
+                <Experience />
+                <Music />
+                <About />
+                <Contact />
+                <ScrollToggle />
+              </main>
             }
           />
           <Route path="*" element={<NotFound />} />

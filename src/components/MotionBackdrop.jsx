@@ -36,6 +36,20 @@ function buildGusts() {
   }));
 }
 
+// Safe rAF wrapper — iOS Safari pre-12 exposed it only as a prefixed global.
+// Falls back to a 16ms setTimeout so scroll handling never silently dies.
+const raf =
+  (typeof window !== "undefined" &&
+    (window.requestAnimationFrame ||
+      window.webkitRequestAnimationFrame)) ||
+  ((cb) => setTimeout(cb, 16));
+
+const caf =
+  (typeof window !== "undefined" &&
+    (window.cancelAnimationFrame ||
+      window.webkitCancelAnimationFrame)) ||
+  clearTimeout;
+
 export default function MotionBackdrop() {
   const clouds = useMemo(() => buildClouds(), []);
   const drops = useMemo(() => buildDrops(), []);
@@ -52,8 +66,8 @@ export default function MotionBackdrop() {
     let frame = null;
 
     const measure = () => {
-      const doc = document.documentElement;
-      const scrollY = window.scrollY || window.pageYOffset || 0;
+      // pageYOffset is the iOS-safe alias; scrollY can be undefined on very old WebKit
+      const scrollY = window.pageYOffset || window.scrollY || 0;
       const viewportHeight = window.innerHeight || 1;
       const midpoint = scrollY + viewportHeight * 0.52;
 
@@ -109,17 +123,13 @@ export default function MotionBackdrop() {
 
         if (hasSameScene) return current;
 
-        return {
-          activeIndex,
-          nextIndex,
-          blend: quantizedBlend,
-        };
+        return { activeIndex, nextIndex, blend: quantizedBlend };
       });
     };
 
     const requestMeasure = () => {
       if (frame) return;
-      frame = window.requestAnimationFrame(() => {
+      frame = raf(() => {
         frame = null;
         measure();
       });
@@ -127,14 +137,12 @@ export default function MotionBackdrop() {
 
     measure();
     window.addEventListener("scroll", requestMeasure, { passive: true });
-    window.addEventListener("resize", requestMeasure);
+    window.addEventListener("resize", requestMeasure, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", requestMeasure);
       window.removeEventListener("resize", requestMeasure);
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
+      if (frame) caf(frame);
     };
   }, []);
 
@@ -155,16 +163,22 @@ export default function MotionBackdrop() {
         <span className="motion-orb motion-orb-2" />
         <span className="motion-orb motion-orb-3" />
       </div>
-      <div className="motion-global motion-wind absolute inset-0 overflow-hidden">
+      {/* Removed overflow-hidden from this wrapper — on iOS it can suppress painting
+          of child elements inside fixed/absolute stacking contexts */}
+      <div className="motion-global motion-wind absolute inset-0">
         <span className="motion-wind-line" style={{ top: "15%", animationDelay: "0s" }} />
         <span className="motion-wind-line" style={{ top: "45%", animationDelay: "2.3s" }} />
         <span className="motion-wind-line" style={{ top: "75%", animationDelay: "5.1s" }} />
       </div>
       <div className="motion-global motion-kirin absolute inset-0" />
 
+      {/* will-change: opacity tells iOS to promote each scene to its own compositor
+          layer so cross-fades are handled by the GPU instead of re-painting on the
+          main thread. Without this, scroll-driven opacity changes can stutter or
+          drop frames on older iPhones. Android benefits from this too. */}
       <section
         className="motion-scene motion-scene--home"
-        style={{ opacity: sceneOpacity[0] ?? 0 }}
+        style={{ opacity: sceneOpacity[0] ?? 0, willChange: "opacity" }}
       >
         {clouds.map((cloud, index) => (
           <span
@@ -183,28 +197,26 @@ export default function MotionBackdrop() {
 
       <section
         className="motion-scene motion-scene--projects"
-        style={{ opacity: sceneOpacity[1] ?? 0 }}
+        style={{ opacity: sceneOpacity[1] ?? 0, willChange: "opacity" }}
       >
-        {drops.map((drop, index) => {
-          return (
-            <span
-              key={drop.id}
-              className="motion-drop"
-              style={{
-                "--drop-left": `${drop.left}%`,
-                "--drop-height": `${drop.length}px`,
-                "--drop-duration": `${drop.duration}s`,
-                "--drop-delay": `${drop.delay}s`,
-              }}
-            />
-          );
-        })}
+        {drops.map((drop) => (
+          <span
+            key={drop.id}
+            className="motion-drop"
+            style={{
+              "--drop-left": `${drop.left}%`,
+              "--drop-height": `${drop.length}px`,
+              "--drop-duration": `${drop.duration}s`,
+              "--drop-delay": `${drop.delay}s`,
+            }}
+          />
+        ))}
         <span className="motion-ripple" />
       </section>
 
       <section
         className="motion-scene motion-scene--experience"
-        style={{ opacity: sceneOpacity[2] ?? 0 }}
+        style={{ opacity: sceneOpacity[2] ?? 0, willChange: "opacity" }}
       >
         <div className="motion-windmill">
           <span className="motion-windmill__hub" />
@@ -217,7 +229,7 @@ export default function MotionBackdrop() {
 
       <section
         className="motion-scene motion-scene--music"
-        style={{ opacity: sceneOpacity[3] ?? 0 }}
+        style={{ opacity: sceneOpacity[3] ?? 0, willChange: "opacity" }}
       >
         <div className="motion-wave motion-wave--one" />
         <div className="motion-wave motion-wave--two" />
@@ -226,7 +238,7 @@ export default function MotionBackdrop() {
 
       <section
         className="motion-scene motion-scene--about"
-        style={{ opacity: sceneOpacity[4] ?? 0 }}
+        style={{ opacity: sceneOpacity[4] ?? 0, willChange: "opacity" }}
       >
         {[0, 1, 2].map((index) => (
           <span
@@ -238,9 +250,9 @@ export default function MotionBackdrop() {
 
       <section
         className="motion-scene motion-scene--contact"
-        style={{ opacity: sceneOpacity[5] ?? 0 }}
+        style={{ opacity: sceneOpacity[5] ?? 0, willChange: "opacity" }}
       >
-        {gusts.map((gust, index) => (
+        {gusts.map((gust) => (
           <span
             key={gust.id}
             className="motion-gust"
