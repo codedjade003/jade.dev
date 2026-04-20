@@ -2,7 +2,7 @@ export default function Home() {
   return (
     <section
       id="home"
-      className="min-h-[calc(100svh-72px)] md:min-h-screen scroll-mt-20 flex items-center justify-center text-center px-4 sm:px-6 
+      className="min-h-screen scroll-mt-20 flex items-center justify-center text-center px-4 sm:px-6 
       bg-transparent text-blue-800
       dark:text-blue-300 transition-colors duration-300"
     >

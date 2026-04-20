@@ -46,8 +46,8 @@ function App() {
       return undefined;
     }
 
-    // 4s is plenty — 7s looked broken on slow connections and froze on iOS background tabs
-    const timer = setTimeout(() => setLoading(false), 4000);
+    // Keep loader visible for 7s to match original behavior and UX expectations
+    const timer = setTimeout(() => setLoading(false), 7000);
     return () => clearTimeout(timer);
   }, []);
 
