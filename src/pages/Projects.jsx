@@ -8,6 +8,18 @@ const getYouTubeThumbnailSources = (youtubeId) => [
   `https://i.ytimg.com/vi/${youtubeId}/mqdefault.jpg`,
 ];
 
+// Detect if the device uses touch as primary input.
+// We commit to either Pointer Events or Touch Events per element — never both.
+// This prevents iOS from firing both and doubling up gesture state.
+function isTouchPrimary() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia("(pointer: coarse)").matches;
+  } catch (e) {
+    return "ontouchstart" in window;
+  }
+}
+
 export default function Projects() {
   const projectSectionConfig = getProjectSectionConfig();
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
@@ -41,10 +53,7 @@ export default function Projects() {
       const totalSections = projectSectionConfig.length;
       return (current + direction + totalSections) % totalSections;
     });
-
-    if (feedback) {
-      triggerInteractionFeedback(feedback);
-    }
+    if (feedback) triggerInteractionFeedback(feedback);
   };
 
   const jumpToSection = (index) => {
@@ -56,10 +65,7 @@ export default function Projects() {
   };
 
   useEffect(() => {
-    const syncViewport = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
+    const syncViewport = () => setIsMobile(window.innerWidth < 768);
     syncViewport();
     window.addEventListener("resize", syncViewport);
     return () => window.removeEventListener("resize", syncViewport);
@@ -67,29 +73,24 @@ export default function Projects() {
 
   const moveProject = (direction, { feedback = "swipe" } = {}) => {
     if (activeProjectCount < 2) return;
-
     setCardFlipDirection(direction > 0 ? -1 : 1);
     setProjectDragOffset(0);
     setIsProjectDragging(false);
     setProjectIndices((current) => {
       const next = { ...current };
       const currentIndex = next[activeSection.key] ?? 0;
-      next[activeSection.key] = (currentIndex + direction + activeProjectCount) % activeProjectCount;
+      next[activeSection.key] =
+        (currentIndex + direction + activeProjectCount) % activeProjectCount;
       return next;
     });
-
-    if (feedback) {
-      triggerInteractionFeedback(feedback);
-    }
+    if (feedback) triggerInteractionFeedback(feedback);
   };
 
-  // Animate a quick drag-like motion when user clicks the Prev/Next buttons on desktop
   const animateMoveProject = (direction) => {
     if (isProjectDragging) return;
     const animOffset = direction > 0 ? 140 : -140;
     setProjectDragOffset(animOffset);
     setIsProjectDragging(true);
-
     window.setTimeout(() => {
       moveProject(direction, { feedback: "tap" });
       setIsProjectDragging(false);
@@ -99,33 +100,21 @@ export default function Projects() {
 
   useEffect(() => {
     if (activeProjectCount < 2 || pauseAutoSlide) return undefined;
-
-    const timer = setInterval(() => {
-      moveProject(1, { feedback: null });
-    }, 7200);
-
+    const timer = setInterval(() => moveProject(1, { feedback: null }), 7200);
     return () => clearInterval(timer);
   }, [activeProjectCount, activeSection.key, pauseAutoSlide]);
 
-  const handleSectionDragStart = () => {
-    setIsSectionDragging(true);
-  };
-
-  const handleSectionDragMove = (deltaX) => {
+  const handleSectionDragStart = () => setIsSectionDragging(true);
+  const handleSectionDragMove = (deltaX) =>
     setSectionDragOffset(clamp(deltaX, -190, 190));
-  };
-
   const handleSectionDragEnd = (deltaX, wasDragging) => {
     setIsSectionDragging(false);
     setSectionDragOffset(0);
-
     if (!wasDragging) return false;
-
     if (Math.abs(deltaX) > 62) {
       moveSection(deltaX < 0 ? 1 : -1, { feedback: "swipe" });
       return true;
     }
-
     return true;
   };
 
@@ -140,99 +129,106 @@ export default function Projects() {
     setIsProjectDragging(false);
   };
 
-  const handleProjectPointerDown = (event) => {
-    if (isInteractiveTarget(event.target)) return;
+  // ---------- Project card: unified touch handler (iOS-safe) ----------
+  // On touch-primary devices we use Touch Events exclusively.
+  // Pointer Events are used on mouse-primary devices (desktop).
+  // Mixing both on the same element causes iOS to double-fire and corrupt state.
 
-    projectDragRef.current = {
-      active: true,
-      dragging: false,
-      startX: event.clientX,
-      startY: event.clientY,
-    };
-
-    if (typeof event.currentTarget.setPointerCapture === "function") {
-      event.currentTarget.setPointerCapture(event.pointerId);
-    }
-  };
-
-  // Touch fallbacks for browsers that don't support Pointer Events (older iOS Safari)
   const handleProjectTouchStart = (e) => {
     if (!e.touches || !e.touches[0]) return;
+    if (isInteractiveTarget(e.touches[0].target)) return;
     const t = e.touches[0];
-    if (isInteractiveTarget(t.target)) return;
-
-    projectDragRef.current = {
-      active: true,
-      dragging: false,
-      startX: t.clientX,
-      startY: t.clientY,
-    };
+    projectDragRef.current = { active: true, dragging: false, startX: t.clientX, startY: t.clientY };
   };
 
   const handleProjectTouchMove = (e) => {
     const state = projectDragRef.current;
     if (!state.active || !e.touches || !e.touches[0]) return;
-
     const t = e.touches[0];
     const deltaX = t.clientX - state.startX;
     const deltaY = t.clientY - state.startY;
 
     if (!state.dragging) {
       if (Math.abs(deltaX) < 8) return;
-      if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+      // If more vertical than horizontal, let the page scroll — don't hijack
+      if (Math.abs(deltaX) < Math.abs(deltaY)) {
+        projectDragRef.current.active = false;
+        return;
+      }
       state.dragging = true;
       setIsProjectDragging(true);
     }
 
+    // Prevent page scroll while we own the horizontal drag
+    e.preventDefault();
     setProjectDragOffset(clamp(deltaX, -180, 180));
   };
 
   const handleProjectTouchEnd = (e) => {
     const state = projectDragRef.current;
     if (!state.active) return;
-
     const ct = e.changedTouches && e.changedTouches[0];
     const deltaX = ct ? ct.clientX - state.startX : 0;
     const wasDragging = state.dragging;
     resetProjectDrag();
-
     if (!wasDragging) return;
-
-    if (Math.abs(deltaX) > 65) {
+    if (Math.abs(deltaX) > 55) {
       moveProject(deltaX < 0 ? 1 : -1, { feedback: "swipe" });
     }
   };
 
+  // Desktop-only pointer handlers (skipped on touch-primary devices)
+  const handleProjectPointerDown = (event) => {
+    if (isTouchPrimary()) return; // touch devices use Touch Events above
+    if (isInteractiveTarget(event.target)) return;
+    projectDragRef.current = {
+      active: true,
+      dragging: false,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+    if (typeof event.currentTarget.setPointerCapture === "function") {
+      try { event.currentTarget.setPointerCapture(event.pointerId); } catch (e) {}
+    }
+  };
+
   const handleProjectPointerMove = (event) => {
+    if (isTouchPrimary()) return;
     const state = projectDragRef.current;
     if (!state.active) return;
-
     const deltaX = event.clientX - state.startX;
     const deltaY = event.clientY - state.startY;
-
     if (!state.dragging) {
       if (Math.abs(deltaX) < 8) return;
       if (Math.abs(deltaX) < Math.abs(deltaY)) return;
       state.dragging = true;
       setIsProjectDragging(true);
     }
-
     setProjectDragOffset(clamp(deltaX, -180, 180));
   };
 
   const handleProjectPointerEnd = (event) => {
+    if (isTouchPrimary()) return;
     const state = projectDragRef.current;
     if (!state.active) return;
-
     const deltaX = event.clientX - state.startX;
     const wasDragging = state.dragging;
     resetProjectDrag();
-
     if (!wasDragging) return;
-
-    if (Math.abs(deltaX) > 65) {
+    if (Math.abs(deltaX) > 55) {
       moveProject(deltaX < 0 ? 1 : -1, { feedback: "swipe" });
     }
+  };
+
+  const handleProjectPointerLeave = (event) => {
+    if (isTouchPrimary()) return;
+    // Only reset if pointer left while not actively dragging —
+    // fast swipes fire pointerleave on iOS and would cancel the gesture
+    if (projectDragRef.current.active && projectDragRef.current.dragging) {
+      handleProjectPointerEnd(event);
+      return;
+    }
+    if (projectDragRef.current.active) resetProjectDrag();
   };
 
   return (
@@ -242,9 +238,7 @@ export default function Projects() {
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6 sm:space-y-7">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-          <h2 data-reveal="left" className="text-3xl font-bold">
-            Projects
-          </h2>
+          <h2 data-reveal="left" className="text-3xl font-bold">Projects</h2>
           <p
             data-reveal="right"
             style={{ "--reveal-delay": "120ms" }}
@@ -254,33 +248,24 @@ export default function Projects() {
           </p>
         </div>
 
-        <div
-          data-reveal="up"
-          style={{ "--reveal-delay": "140ms" }}
-          className="pt-3 sm:pt-4"
-        >
+        <div data-reveal="up" style={{ "--reveal-delay": "140ms" }} className="pt-3 sm:pt-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 whitespace-nowrap">
               Project Carousel
             </p>
-
             <div className="hidden md:flex items-center gap-2">
               <button
                 onClick={() => moveSection(-1, { feedback: "tap" })}
                 type="button"
                 aria-label="Previous project category"
                 className="h-8 w-8 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors"
-              >
-                {"<"}
-              </button>
+              >{"<"}</button>
               <button
                 onClick={() => moveSection(1, { feedback: "tap" })}
                 type="button"
                 aria-label="Next project category"
                 className="h-8 w-8 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors"
-              >
-                {">"}
-              </button>
+              >{">"}</button>
             </div>
           </div>
 
@@ -296,10 +281,12 @@ export default function Projects() {
           >
             {[-1, 0, 1].map((offset) => {
               const sectionIndex =
-                (activeSectionIndex + offset + projectSectionConfig.length) % projectSectionConfig.length;
+                (activeSectionIndex + offset + projectSectionConfig.length) %
+                projectSectionConfig.length;
               const section = projectSectionConfig[sectionIndex];
               const isCenter = offset === 0;
-              const previewProject = section.projects[projectIndices[section.key] ?? 0] ?? section.projects[0];
+              const previewProject =
+                section.projects[projectIndices[section.key] ?? 0] ?? section.projects[0];
 
               return (
                 <SectionFlipCategoryCard
@@ -316,7 +303,6 @@ export default function Projects() {
                   onDragMove={handleSectionDragMove}
                   onDragEnd={handleSectionDragEnd}
                   onTapFlip={() => {
-                    if (!isMobile) return;
                     triggerInteractionFeedback("tap");
                     setMobileFlippedSectionKey((current) =>
                       current === section.key ? null : section.key
@@ -362,31 +348,27 @@ export default function Projects() {
                 <h3 className="text-2xl font-semibold">{activeSection.title}</h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">{activeSection.hint}</p>
               </div>
-
               <div className="hidden md:flex items-center gap-2">
                 <button
                   onClick={() => animateMoveProject(-1)}
                   type="button"
                   aria-label={`Previous ${activeSection.title} project`}
                   className="px-3 py-1.5 rounded-full border border-blue-300 dark:border-blue-600 text-sm hover:border-red-500 hover:text-red-500 transition-colors active:scale-95"
-                >
-                  Prev
-                </button>
+                >Prev</button>
                 <button
                   onClick={() => animateMoveProject(1)}
                   type="button"
                   aria-label={`Next ${activeSection.title} project`}
                   className="px-3 py-1.5 rounded-full bg-blue-700 dark:bg-blue-500 text-white text-sm hover:bg-red-500 dark:hover:bg-red-400 transition-colors active:scale-95"
-                >
-                  Next
-                </button>
+                >Next</button>
               </div>
             </div>
 
             <div
               className="project-flick-surface mt-5"
-              onMouseEnter={() => setPauseAutoSlide(true)}
+              onMouseEnter={() => !isTouchPrimary() && setPauseAutoSlide(true)}
               onMouseLeave={() => {
+                if (isTouchPrimary()) return;
                 setPauseAutoSlide(false);
                 resetProjectDrag();
               }}
@@ -395,29 +377,24 @@ export default function Projects() {
                 tabIndex={0}
                 role="region"
                 aria-label={`${activeSection.title} project carousel`}
-                onPointerDown={handleProjectPointerDown}
-                onPointerMove={handleProjectPointerMove}
-                onPointerUp={handleProjectPointerEnd}
-                onPointerCancel={resetProjectDrag}
-                onPointerLeave={(event) => {
-                  if (projectDragRef.current.active && projectDragRef.current.dragging) {
-                    handleProjectPointerEnd(event);
-                    return;
-                  }
-
-                  if (projectDragRef.current.active) {
-                    resetProjectDrag();
-                  }
-                }}
+                // Touch Events (iOS / Android touch)
                 onTouchStart={handleProjectTouchStart}
                 onTouchMove={handleProjectTouchMove}
                 onTouchEnd={handleProjectTouchEnd}
                 onTouchCancel={resetProjectDrag}
+                // Pointer Events (desktop mouse only — skipped on touch via isTouchPrimary guard)
+                onPointerDown={handleProjectPointerDown}
+                onPointerMove={handleProjectPointerMove}
+                onPointerUp={handleProjectPointerEnd}
+                onPointerCancel={resetProjectDrag}
+                onPointerLeave={handleProjectPointerLeave}
                 onKeyDown={(event) => {
                   if (event.key === "ArrowRight") moveProject(1, { feedback: "tap" });
                   if (event.key === "ArrowLeft") moveProject(-1, { feedback: "tap" });
                 }}
                 className="outline-none"
+                // Required for e.preventDefault() in touchmove to work in passive-by-default browsers
+                style={{ touchAction: "pan-y" }}
               >
                 <div
                   className={`transition-transform ${isProjectDragging ? "duration-75" : "duration-300"}`}
@@ -441,9 +418,7 @@ export default function Projects() {
               </div>
 
               <div className="mt-4 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                <span>
-                  {activeProjectIndex + 1} of {activeProjectCount}
-                </span>
+                <span>{activeProjectIndex + 1} of {activeProjectCount}</span>
                 <span>Swipe card to loop</span>
               </div>
             </div>
@@ -474,14 +449,21 @@ export default function Projects() {
             className="underline hover:text-red-500"
           >
             GitHub
-          </a>
-          .
+          </a>.
         </p>
       </div>
     </section>
   );
 }
 
+// ---------------------------------------------------------------------------
+// SectionFlipCategoryCard
+// ---------------------------------------------------------------------------
+// Fixed: removed dynamic import() from touch handlers (broke iOS gesture pipeline).
+// Fixed: commit to Touch Events on touch-primary devices, Pointer Events on mouse.
+//        Mixing both on the same element caused iOS to double-fire and corrupt state.
+// Fixed: setPointerCapture skipped on touch-primary devices.
+// ---------------------------------------------------------------------------
 function SectionFlipCategoryCard({
   section,
   previewProject,
@@ -503,12 +485,11 @@ function SectionFlipCategoryCard({
   const [thumbnailIndex, setThumbnailIndex] = useState(0);
   const [isDesktopFlipped, setIsDesktopFlipped] = useState(false);
   const [forceFront, setForceFront] = useState(false);
-  const pointerStartRef = useRef(null);
+  const gestureRef = useRef(null); // { x, y, dragging }
+
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
-  useEffect(() => {
-    setThumbnailIndex(0);
-  }, [previewProject?.youtubeId]);
+  useEffect(() => { setThumbnailIndex(0); }, [previewProject?.youtubeId]);
 
   const previewImage = thumbnailSources.length ? thumbnailSources[thumbnailIndex] : null;
   const dragProgress = clamp(sectionDragOffset / 190, -1, 1);
@@ -519,169 +500,132 @@ function SectionFlipCategoryCard({
   const saturation = clamp(1 - absOffset * 0.24, 0.56, 1);
   const cardDistance = "clamp(9.5rem, 31vw, 22rem)";
 
-  const handlePointerDown = (event) => {
-    // Allow pointer drags on desktop (mouse) and touch. Ignore non-primary buttons.
-    if (event.button && event.button !== 0) return;
+  const touchDevice = isTouchPrimary();
 
-    pointerStartRef.current = {
-      x: event.clientX,
-      y: event.clientY,
-      dragging: false,
-    };
-
-    if (typeof event.currentTarget.setPointerCapture === "function") {
-      try {
-        event.currentTarget.setPointerCapture?.(event.pointerId);
-      } catch (e) {}
-    }
-
-    // Trigger light feedback on pointer down (mouse or touch)
-    import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
-  };
-
-  // Touch fallbacks for SectionFlipCategoryCard (for browsers without Pointer Events)
+  // --- Touch handlers (iOS / Android) ---
   const handleTouchStart = (e) => {
-    if (!isMobile || !e.touches || !e.touches[0]) return;
+    if (!e.touches || !e.touches[0]) return;
     const t = e.touches[0];
-
-    pointerStartRef.current = {
-      x: t.clientX,
-      y: t.clientY,
-      dragging: false,
-    };
-
-    // Feedback for touch start
-    import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('tap'));
+    gestureRef.current = { x: t.clientX, y: t.clientY, dragging: false };
+    // Synchronous call — no dynamic import — so iOS keeps the gesture alive
+    triggerInteractionFeedback("tap");
   };
 
   const handleTouchMove = (e) => {
-    if (!isMobile || !e.touches || !e.touches[0] || !pointerStartRef.current) return;
+    if (!gestureRef.current || !e.touches || !e.touches[0]) return;
     const t = e.touches[0];
+    const deltaX = t.clientX - gestureRef.current.x;
+    const deltaY = t.clientY - gestureRef.current.y;
 
-    const deltaX = t.clientX - pointerStartRef.current.x;
-    const deltaY = t.clientY - pointerStartRef.current.y;
-
-    if (!pointerStartRef.current.dragging) {
+    if (!gestureRef.current.dragging) {
       if (Math.abs(deltaX) < 8) return;
-      if (Math.abs(deltaX) < Math.abs(deltaY)) return;
-
-      pointerStartRef.current.dragging = true;
+      if (Math.abs(deltaX) < Math.abs(deltaY)) {
+        // More vertical than horizontal — surrender to page scroll
+        gestureRef.current = null;
+        return;
+      }
+      gestureRef.current.dragging = true;
       onDragStart();
-      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
+      triggerInteractionFeedback("swipe");
     }
 
-    if (pointerStartRef.current.dragging) {
-      onDragMove(deltaX);
-    }
+    e.preventDefault(); // prevent scroll while we own the drag
+    onDragMove(deltaX);
   };
 
   const handleTouchEnd = (e) => {
-    if (!isMobile) return;
+    if (!gestureRef.current) return;
     const ct = e.changedTouches && e.changedTouches[0];
-    if (!ct) {
-      pointerStartRef.current = null;
-      return;
-    }
-
-    const deltaX = ct.clientX - (pointerStartRef.current?.x ?? 0);
-    const deltaY = ct.clientY - (pointerStartRef.current?.y ?? 0);
-    const wasDragging = pointerStartRef.current?.dragging;
-    pointerStartRef.current = null;
+    const deltaX = ct ? ct.clientX - gestureRef.current.x : 0;
+    const deltaY = ct ? ct.clientY - gestureRef.current.y : 0;
+    const wasDragging = gestureRef.current.dragging;
+    gestureRef.current = null;
 
     const dragConsumed = onDragEnd(deltaX, wasDragging);
     if (dragConsumed) {
-      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
+      triggerInteractionFeedback("swipe");
       return;
     }
 
+    // Small movement = tap
     if (Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12) {
       if (isCenter) {
         onTapFlip();
+      } else {
+        triggerInteractionFeedback("tap");
+        onSelect();
       }
     }
+  };
+
+  // --- Pointer handlers (desktop mouse only) ---
+  const handlePointerDown = (event) => {
+    if (touchDevice) return;
+    if (event.button && event.button !== 0) return;
+    gestureRef.current = { x: event.clientX, y: event.clientY, dragging: false };
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch (e) {}
+    triggerInteractionFeedback("tap");
   };
 
   const handlePointerMove = (event) => {
-    if (!pointerStartRef.current) return;
-
-    const deltaX = event.clientX - pointerStartRef.current.x;
-    const deltaY = event.clientY - pointerStartRef.current.y;
-
-    if (!pointerStartRef.current.dragging) {
+    if (touchDevice || !gestureRef.current) return;
+    const deltaX = event.clientX - gestureRef.current.x;
+    const deltaY = event.clientY - gestureRef.current.y;
+    if (!gestureRef.current.dragging) {
       if (Math.abs(deltaX) < 8) return;
       if (Math.abs(deltaX) < Math.abs(deltaY)) return;
-
-      pointerStartRef.current.dragging = true;
+      gestureRef.current.dragging = true;
       onDragStart();
-      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
+      triggerInteractionFeedback("swipe");
     }
-
-    if (pointerStartRef.current.dragging) {
-      onDragMove(deltaX);
-    }
+    onDragMove(deltaX);
   };
 
   const handlePointerUp = (event) => {
-    if (!pointerStartRef.current) return;
-
-    const deltaX = event.clientX - pointerStartRef.current.x;
-    const deltaY = event.clientY - pointerStartRef.current.y;
-    const wasDragging = pointerStartRef.current.dragging;
-    pointerStartRef.current = null;
+    if (touchDevice || !gestureRef.current) return;
+    const deltaX = event.clientX - gestureRef.current.x;
+    const deltaY = event.clientY - gestureRef.current.y;
+    const wasDragging = gestureRef.current.dragging;
+    gestureRef.current = null;
 
     const dragConsumed = onDragEnd(deltaX, wasDragging);
     if (dragConsumed) {
-      import('../utils/interactionFeedback').then(m => m.triggerInteractionFeedback('swipe'));
+      triggerInteractionFeedback("swipe");
       return;
     }
-
     if (Math.abs(deltaX) < 12 && Math.abs(deltaY) < 12) {
       if (isCenter) {
-        onTapFlip();
+        setForceFront((s) => !s);
+        setIsDesktopFlipped(false);
+        triggerInteractionFeedback("tap");
+      } else {
+        triggerInteractionFeedback("tap");
+        onSelect();
       }
     }
+  };
+
+  const handleCancel = () => {
+    gestureRef.current = null;
+    onDragEnd(0, false);
+    setForceFront(false);
   };
 
   return (
     <button
       type="button"
-      onClick={() => {
-        // Desktop: clicking the center card toggles a forced front state so users can
-        // intentionally return the card to its front face and then interact/drag.
-        if (isCenter) {
-          if (isMobile) {
-            onTapFlip();
-          } else {
-            setForceFront((s) => !s);
-            setIsDesktopFlipped(false);
-            triggerInteractionFeedback("tap");
-          }
-          return;
-        }
-
-        // Non-center: select the card to move the carousel
-        triggerInteractionFeedback("tap");
-        onSelect();
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={() => {
-        pointerStartRef.current = null;
-        onDragEnd(0, false);
-      }}
-      onPointerLeave={() => {
-        pointerStartRef.current = null;
-        onDragEnd(0, false);
-        // Reset any forced front state when pointer leaves
-        setForceFront(false);
-      }}
+      // onClick is intentionally omitted — tap is handled in touch/pointer up
+      // so we don't double-fire on iOS (click fires after touchend)
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onTouchCancel={() => {
-        pointerStartRef.current = null;
-        onDragEnd(0, false);
+      onTouchCancel={handleCancel}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handleCancel}
+      onPointerLeave={() => {
+        if (!touchDevice && gestureRef.current) handleCancel();
       }}
       aria-current={isCenter ? "true" : undefined}
       className="group absolute left-1/2 top-1/2 w-[clamp(12rem,45vw,21rem)] h-[10.5rem] sm:h-[12rem] text-left transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
@@ -693,10 +637,14 @@ function SectionFlipCategoryCard({
         transition: isSectionDragging
           ? "transform 0ms linear, opacity 220ms ease, filter 220ms ease"
           : undefined,
+        // Needed for touchmove preventDefault to work
+        touchAction: "pan-y",
       }}
     >
       <div
-        className={`section-flip-card h-full w-full ${(isMobile ? isMobileFlipped : isDesktopFlipped) ? "is-flipped" : ""} ${forceFront ? "force-front" : ""}`}
+        className={`section-flip-card h-full w-full ${
+          (isMobile ? isMobileFlipped : isDesktopFlipped) ? "is-flipped" : ""
+        } ${forceFront ? "force-front" : ""}`}
       >
         <div className="section-flip-card-inner">
           <div
@@ -712,11 +660,11 @@ function SectionFlipCategoryCard({
                   src={previewImage}
                   alt={`${section.title} preview`}
                   loading="lazy"
-                  onError={() => {
+                  onError={() =>
                     setThumbnailIndex((current) =>
                       Math.min(current + 1, Math.max(thumbnailSources.length - 1, 0))
-                    );
-                  }}
+                    )
+                  }
                   referrerPolicy="strict-origin-when-cross-origin"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
@@ -734,18 +682,30 @@ function SectionFlipCategoryCard({
 
               <div className="relative z-10 flex h-full flex-col justify-end p-3 sm:p-4 text-white">
                 <p className="text-[10px] uppercase tracking-[0.2em] text-blue-100">{section.type}</p>
-                <h4 className={`font-semibold leading-tight ${isCenter ? "text-lg" : "text-sm"}`}>{section.title}</h4>
-                <p className="text-xs text-blue-100/95 truncate">{previewProject?.title ?? "No preview available"}</p>
+                <h4 className={`font-semibold leading-tight ${isCenter ? "text-lg" : "text-sm"}`}>
+                  {section.title}
+                </h4>
+                <p className="text-xs text-blue-100/95 truncate">
+                  {previewProject?.title ?? "No preview available"}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="section-flip-face section-flip-back rounded-2xl border border-blue-200 dark:border-blue-800 bg-white/95 dark:bg-[#1f233c] p-3 sm:p-4">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-blue-500 dark:text-blue-300">{section.type}</p>
-            <h4 className="mt-1 font-semibold text-base text-blue-800 dark:text-blue-100">{section.title}</h4>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-blue-500 dark:text-blue-300">
+              {section.type}
+            </p>
+            <h4 className="mt-1 font-semibold text-base text-blue-800 dark:text-blue-100">
+              {section.title}
+            </h4>
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">{section.hint}</p>
-            <p className="mt-2 text-xs font-semibold text-blue-600 dark:text-blue-300">{section.projects.length} projects</p>
-            <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">Hover to flip. Swipe to rotate.</p>
+            <p className="mt-2 text-xs font-semibold text-blue-600 dark:text-blue-300">
+              {section.projects.length} projects
+            </p>
+            <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">
+              Tap to flip. Swipe to rotate.
+            </p>
           </div>
         </div>
       </div>
@@ -753,21 +713,21 @@ function SectionFlipCategoryCard({
   );
 }
 
+// ---------------------------------------------------------------------------
+// ProjectCard
+// ---------------------------------------------------------------------------
 function ProjectCard({ project, type, originIndex, totalProjects }) {
   return (
     <div className="project-stack h-full lg:max-w-[72rem] xl:max-w-[68rem] mx-auto">
       <article className="h-full bg-slate-100 dark:bg-slate-800/95 p-4 rounded-2xl border border-blue-100 dark:border-slate-700 shadow text-sm flex flex-col">
         <HoverVideoPreview project={project} />
-
         <div className="flex items-start justify-between gap-3 mb-2">
           <h4 className="text-lg font-semibold leading-tight">{project.title}</h4>
           <span className="text-[10px] uppercase tracking-[0.2em] font-semibold text-blue-600 dark:text-blue-300 whitespace-nowrap">
             {originIndex + 1}/{totalProjects}
           </span>
         </div>
-
         <p className="text-slate-700 dark:text-slate-300 mb-4">{project.description}</p>
-
         <div className="mt-auto">
           <ProjectActions project={project} type={type} />
         </div>
@@ -776,14 +736,20 @@ function ProjectCard({ project, type, originIndex, totalProjects }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// HoverVideoPreview
+// Fixed: mouse events (onMouseEnter/Leave) are unreliable on iOS — a tap fires
+// mouseenter but never mouseleave, leaving the iframe mounted and blocking
+// subsequent touches. Replaced with an explicit toggle on click/tap only,
+// with a visible play/stop button so the intent is clear on all devices.
+// ---------------------------------------------------------------------------
 function HoverVideoPreview({ project }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const isTouch = isTouchPrimary();
   const thumbnailSources = project.youtubeId ? getYouTubeThumbnailSources(project.youtubeId) : [];
   const [thumbnailIndex, setThumbnailIndex] = useState(0);
 
-  useEffect(() => {
-    setThumbnailIndex(0);
-  }, [project.youtubeId]);
+  useEffect(() => { setThumbnailIndex(0); }, [project.youtubeId]);
 
   if (!project.youtubeId) {
     return (
@@ -798,22 +764,24 @@ function HoverVideoPreview({ project }) {
   return (
     <div
       className="relative aspect-video lg:aspect-[16/7.4] 2xl:aspect-[16/7] rounded-xl overflow-hidden mb-4 group"
-      onMouseEnter={() => setIsPlaying(true)}
-      onMouseLeave={() => setIsPlaying(false)}
-      onClick={() => setIsPlaying((playing) => !playing)}
+      // Desktop: hover to play / stop
+      onMouseEnter={() => !isTouch && setIsPlaying(true)}
+      onMouseLeave={() => !isTouch && setIsPlaying(false)}
+      // All devices: tap/click toggles
+      onClick={() => setIsPlaying((p) => !p)}
     >
       <img
         src={thumbnailSources[thumbnailIndex]}
         alt={`${project.title} preview`}
         loading="lazy"
-        onError={() => {
+        onError={() =>
           setThumbnailIndex((current) =>
             Math.min(current + 1, Math.max(thumbnailSources.length - 1, 0))
-          );
-        }}
+          )
+        }
         referrerPolicy="strict-origin-when-cross-origin"
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
-          isPlaying ? "opacity-0" : "opacity-100"
+          isPlaying ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
       />
 
@@ -835,16 +803,21 @@ function HoverVideoPreview({ project }) {
           isPlaying ? "opacity-0" : "opacity-100"
         }`}
       >
-        Hover to play
+        {isTouch ? "Tap to play" : "Hover to play"}
       </div>
     </div>
   );
 }
 
+// ---------------------------------------------------------------------------
+// ProjectActions, ProgressBar — unchanged
+// ---------------------------------------------------------------------------
 function ProjectActions({ project, type }) {
   if (type === "live" || type === "personal" || type === "recent") {
     const hasSeparateSiteAndCode = Boolean(project.site && project.code);
-    const siteHref = project.site ?? (type === "live" && project.codeLabel === "Visit Site" ? project.code : null);
+    const siteHref =
+      project.site ??
+      (type === "live" && project.codeLabel === "Visit Site" ? project.code : null);
     const codeHref = hasSeparateSiteAndCode
       ? project.code
       : type === "personal" || type === "recent"
@@ -856,34 +829,20 @@ function ProjectActions({ project, type }) {
     return (
       <div className="flex gap-2 flex-wrap">
         {project.demo && (
-          <a
-            href={project.demo}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 text-sm bg-blue-700 text-white rounded font-semibold hover:bg-red-500 transition-colors dark:bg-blue-500 dark:hover:bg-red-400"
-          >
+          <a href={project.demo} target="_blank" rel="noopener noreferrer"
+            className="px-3 py-1.5 text-sm bg-blue-700 text-white rounded font-semibold hover:bg-red-500 transition-colors dark:bg-blue-500 dark:hover:bg-red-400">
             View Demo
           </a>
         )}
-
         {siteHref && (
-          <a
-            href={siteHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
-          >
+          <a href={siteHref} target="_blank" rel="noopener noreferrer"
+            className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400">
             Visit Site
           </a>
         )}
-
         {codeHref && (
-          <a
-            href={codeHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
-          >
+          <a href={codeHref} target="_blank" rel="noopener noreferrer"
+            className="px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400">
             {project.codeLabel ?? "Source Code"}
           </a>
         )}
@@ -897,14 +856,9 @@ function ProjectActions({ project, type }) {
         {project.progress.map((bar) => (
           <ProgressBar key={bar.label} label={bar.label} value={bar.value} />
         ))}
-
         {project.demo && (
-          <a
-            href={project.demo}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400"
-          >
+          <a href={project.demo} target="_blank" rel="noopener noreferrer"
+            className="inline-flex px-3 py-1.5 text-sm border border-blue-700 text-blue-700 rounded font-semibold hover:border-red-500 hover:text-red-500 transition-colors dark:border-blue-300 dark:text-blue-300 dark:hover:border-red-400 dark:hover:text-red-400">
             Watch Teaser
           </a>
         )}
@@ -932,103 +886,67 @@ function ProgressBar({ label, value }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Data & config — unchanged
+// ---------------------------------------------------------------------------
 function getProjectSectionConfig() {
   return [
     {
-      key: "live",
-      title: "Live Projects",
-      hint: "Shipped and currently active.",
-      type: "live",
-      projects: liveProjects,
-      align: "left",
-      viewMoreLabel: "View More Live Work",
-      viewMoreHref: "https://github.com/codedjade003",
+      key: "live", title: "Live Projects", hint: "Shipped and currently active.", type: "live",
+      projects: liveProjects, align: "left",
+      viewMoreLabel: "View More Live Work", viewMoreHref: "https://github.com/codedjade003",
     },
     {
-      key: "recent",
-      title: "Recent Projects",
-      hint: "Fresh launches and newly shipped builds.",
-      type: "recent",
-      projects: recentProjects,
-      align: "left",
-      viewMoreLabel: "View More Recent Work",
-      viewMoreHref: "https://github.com/codedjade003",
+      key: "recent", title: "Recent Projects", hint: "Fresh launches and newly shipped builds.", type: "recent",
+      projects: recentProjects, align: "left",
+      viewMoreLabel: "View More Recent Work", viewMoreHref: "https://github.com/codedjade003",
     },
     {
-      key: "personal",
-      title: "Personal Projects",
-      hint: "Built to explore and push ideas.",
-      type: "personal",
-      projects: personalProjects,
-      align: "right",
-      viewMoreLabel: "View More Personal Builds",
-      viewMoreHref: "https://github.com/codedjade003?tab=repositories",
+      key: "personal", title: "Personal Projects", hint: "Built to explore and push ideas.", type: "personal",
+      projects: personalProjects, align: "right",
+      viewMoreLabel: "View More Personal Builds", viewMoreHref: "https://github.com/codedjade003?tab=repositories",
     },
     {
-      key: "upcoming",
-      title: "Upcoming Projects",
-      hint: "Currently cooking with visible progress.",
-      type: "upcoming",
-      projects: upcomingProjects,
-      align: "left",
-      viewMoreLabel: "View More Roadmap",
-      viewMoreHref: "https://github.com/codedjade003",
+      key: "upcoming", title: "Upcoming Projects", hint: "Currently cooking with visible progress.", type: "upcoming",
+      projects: upcomingProjects, align: "left",
+      viewMoreLabel: "View More Roadmap", viewMoreHref: "https://github.com/codedjade003",
     },
   ];
 }
 
-/* ------------------ Data ------------------ */
 const liveProjects = [
   {
     title: "Arewa Film Festival",
-    description:
-      "Official website for the Arewa Film Festival, built to highlight film screenings, schedules, and cultural initiatives across Northern Nigeria. Responsive and designed for accessibility, the platform helps amplify creative voices in the region.",
-    youtubeId: "4MJpAHUfUaQ",
-    demo: "https://youtu.be/4MJpAHUfUaQ",
-    code: "https://arewafilmfestival.com",
-    codeLabel: "Visit Site",
+    description: "Official website for the Arewa Film Festival, built to highlight film screenings, schedules, and cultural initiatives across Northern Nigeria. Responsive and designed for accessibility, the platform helps amplify creative voices in the region.",
+    youtubeId: "4MJpAHUfUaQ", demo: "https://youtu.be/4MJpAHUfUaQ",
+    code: "https://arewafilmfestival.com", codeLabel: "Visit Site",
   },
   {
     title: "Stelle Homes",
-    description:
-      "Real estate platform for showcasing luxury properties. This was my first collaboration project with designer Are Moses, blending design and functionality to create a clean user experience.",
-    youtubeId: "62AW9IENSHo",
-    demo: "https://youtu.be/62AW9IENSHo",
-    code: "https://stellehomes.com",
-    codeLabel: "Visit Site",
+    description: "Real estate platform for showcasing luxury properties. This was my first collaboration project with designer Are Moses, blending design and functionality to create a clean user experience.",
+    youtubeId: "62AW9IENSHo", demo: "https://youtu.be/62AW9IENSHo",
+    code: "https://stellehomes.com", codeLabel: "Visit Site",
   },
 ];
 
 const recentProjects = [
   {
     title: "LFC Jahi Multimedia Repository",
-    description:
-      "A multimedia archive platform for preserving and organizing video content with a clean browse experience for members and media teams.",
-    youtubeId: "JPOaCAFA_Fw",
-    demo: "https://youtu.be/JPOaCAFA_Fw",
-    site: "https://lfcjahimediaarchive.xyz",
-    code: "https://github.com/codedjade003/LFCJahiMediaArchive",
-    codeLabel: "Source Code",
+    description: "A multimedia archive platform for preserving and organizing video content with a clean browse experience for members and media teams.",
+    youtubeId: "JPOaCAFA_Fw", demo: "https://youtu.be/JPOaCAFA_Fw",
+    site: "https://lfcjahimediaarchive.xyz", code: "https://github.com/codedjade003/LFCJahiMediaArchive", codeLabel: "Source Code",
   },
   {
     title: "Goodness Birthday Website",
-    description:
-      "A personalized birthday microsite built as a playful celebration page, blending heartfelt storytelling with polished visual presentation.",
-    youtubeId: "VW2FaJHQAAM",
-    demo: "https://youtu.be/VW2FaJHQAAM",
-    site: "https://goodnessosim.vercel.app",
-    code: "https://github.com/codedjade003/goodness",
-    codeLabel: "Source Code",
+    description: "A personalized birthday microsite built as a playful celebration page, blending heartfelt storytelling with polished visual presentation.",
+    youtubeId: "VW2FaJHQAAM", demo: "https://youtu.be/VW2FaJHQAAM",
+    site: "https://goodnessosim.vercel.app", code: "https://github.com/codedjade003/goodness", codeLabel: "Source Code",
   },
   {
     title: "Tech Learn (Updated)",
-    description:
-      "An updated release of the Tech Learn platform focused on technical training resources, guided learning paths, and community-friendly access.",
-    youtubeId: "QK3Nx6iPiI4",
-    demo: "https://youtu.be/QK3Nx6iPiI4",
-    site: "https://lfctechlearn.com",
-    code: "https://github.com/codedjade003/LFCJahiTechLearn",
-    codeLabel: "Source Code",
+    description: "An updated release of the Tech Learn platform focused on technical training resources, guided learning paths, and community-friendly access.",
+    youtubeId: "QK3Nx6iPiI4", demo: "https://youtu.be/QK3Nx6iPiI4",
+    site: "https://lfctechlearn.com", code: "https://github.com/codedjade003/LFCJahiTechLearn", codeLabel: "Source Code",
   },
 ];
 
@@ -1036,48 +954,35 @@ const personalProjects = [
   {
     title: "Bookstore Inventory App",
     description: "Full-stack app with inventory management using React, Node.js, and MongoDB.",
-    youtubeId: "rc4yrCSd2Hw",
-    demo: "https://youtu.be/rc4yrCSd2Hw",
-    code: "https://github.com/codedjade003/bookstore_project",
-    codeLabel: "Source Code",
+    youtubeId: "rc4yrCSd2Hw", demo: "https://youtu.be/rc4yrCSd2Hw",
+    code: "https://github.com/codedjade003/bookstore_project", codeLabel: "Source Code",
   },
   {
     title: "NFT Marketplace",
     description: "A clean and fast NFT trading platform built with React & Web3.js.",
-    youtubeId: "6PPzeRrN1zw",
-    demo: "https://youtu.be/6PPzeRrN1zw",
-    code: "https://github.com/codedjade003/move-on-aptos-IV",
-    codeLabel: "Source Code",
+    youtubeId: "6PPzeRrN1zw", demo: "https://youtu.be/6PPzeRrN1zw",
+    code: "https://github.com/codedjade003/move-on-aptos-IV", codeLabel: "Source Code",
   },
   {
     title: "Text-to-Image Search",
     description: "Python app for vector search of image captions using ChromaDB and Hugging Face.",
-    youtubeId: "h9b2tqMaHcQ",
-    demo: "https://youtu.be/h9b2tqMaHcQ",
-    code: "https://github.com/codedjade003/Chromadb",
-    codeLabel: "Source Code",
+    youtubeId: "h9b2tqMaHcQ", demo: "https://youtu.be/h9b2tqMaHcQ",
+    code: "https://github.com/codedjade003/Chromadb", codeLabel: "Source Code",
   },
   {
     title: "Sentiment-Aware Chatbot",
     description: "Chatbot powered by LLaMA 2 and Hugging Face, enhanced with real-time sentiment detection.",
-    youtubeId: "kxE8g5dEQ84",
-    demo: "https://youtu.be/kxE8g5dEQ84",
-    code: "https://drive.google.com/file/d/1iyBKacgGq7sUrBi7D86eoV5l_pUg1vl5/view?usp=sharing",
-    codeLabel: "View Notebook",
+    youtubeId: "kxE8g5dEQ84", demo: "https://youtu.be/kxE8g5dEQ84",
+    code: "https://drive.google.com/file/d/1iyBKacgGq7sUrBi7D86eoV5l_pUg1vl5/view?usp=sharing", codeLabel: "View Notebook",
   },
 ];
 
 const upcomingProjects = [
   {
     title: "Samish Homes",
-    description:
-      "A modern property-listing concept for a potential client, designed with a focus on clarity and interactive browsing.",
-    youtubeId: "fCJSpsrc1TY",
-    demo: "https://youtu.be/fCJSpsrc1TY",
-    progress: [
-      { label: "Design", value: 80 },
-      { label: "Development", value: 40 },
-    ],
+    description: "A modern property-listing concept for a potential client, designed with a focus on clarity and interactive browsing.",
+    youtubeId: "fCJSpsrc1TY", demo: "https://youtu.be/fCJSpsrc1TY",
+    progress: [{ label: "Design", value: 80 }, { label: "Development", value: 40 }],
   },
   {
     title: "New Portfolio Website",
